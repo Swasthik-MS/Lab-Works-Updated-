@@ -1,0 +1,1416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eQLM - Prototype</title>
+    <!-- Fonts and Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* --- CSS Reset & Variables --- */
+        :root {
+            --primary-color: #4a90e2; 
+            --header-height: 60px;
+            --sidebar-width: 260px;
+            --bg-color: #f4f6f8;
+            --text-color: #333;
+            --border-color: #e0e0e0;
+            --success-color: #4caf50;
+            --danger-color: #f44336;
+            --active-toggle: #4caf50;
+            --inactive-toggle: #ccc;
+            --row-hover: #f9fafb;
+            --edit-mode-bg: #E3F2FD;
+            --cell-pass: #d4edda;
+            --cell-fail: #f8d7da;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* --- Sidebar --- */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: #fff;
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            z-index: 10;
+        }
+
+        .logo-area {
+            height: var(--header-height);
+            display: flex;
+            align-items: center;
+            padding-left: 20px;
+            border-bottom: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        .logo-img { max-height: 40px; max-width: 100%; }
+        .logo-text { font-size: 24px; font-weight: 700; color: #555; }
+        .logo-text span { color: #8bc34a; }
+
+        .nav-menu { list-style: none; padding-top: 20px; overflow-y: auto; }
+        .nav-item { padding: 0; }
+        .nav-link {
+            display: flex; align-items: center; padding: 12px 20px;
+            text-decoration: none; color: #666; font-size: 14px;
+            transition: all 0.2s; cursor: pointer;
+        }
+        .nav-link:hover { background-color: #f0f0f0; color: var(--primary-color); }
+        .nav-link.active { background-color: #e8f0fe; color: var(--primary-color); border-left: 4px solid var(--primary-color); }
+        .nav-icon { width: 20px; margin-right: 10px; text-align: center; }
+        .nav-arrow { margin-left: auto; font-size: 10px; }
+
+        .submenu { list-style: none; background-color: #fafafa; display: none; }
+        .submenu.open { display: block; }
+        .submenu-item {
+            padding-left: 50px; padding-top: 10px; padding-bottom: 10px;
+            font-size: 13px; color: #666; cursor: pointer; display: flex; align-items: center;
+        }
+        .submenu-item:hover { color: var(--primary-color); }
+        .submenu-item.active-sub { color: var(--primary-color); font-weight: 500; }
+
+        /* --- Main Content --- */
+        .main-content { flex: 1; display: flex; flex-direction: column; height: 100%; }
+
+        .top-header {
+            height: var(--header-height); background-color: #fff; border-bottom: 1px solid var(--border-color);
+            display: flex; align-items: center; justify-content: space-between; padding: 0 20px;
+        }
+        .page-title { font-size: 18px; color: #444; font-weight: 500; }
+        .header-actions { display: flex; align-items: center; gap: 20px; }
+        .header-icon { color: #777; font-size: 16px; cursor: pointer; }
+        .user-profile {
+            width: 35px; height: 35px; background-color: #4caf50; color: white;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 14px; font-weight: bold;
+        }
+
+        .content-body { flex: 1; padding: 20px; overflow-y: auto; position: relative; }
+        .view-section { display: none; height: 100%; }
+        .view-section.active-view { display: block; }
+
+        /* Dashboard Tiles */
+        .dashboard-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        .plant-tile {
+            background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+            width: 280px; height: 120px; border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex;
+            align-items: center; justify-content: space-between;
+            padding: 0 20px; color: white; cursor: pointer; transition: transform 0.2s;
+        }
+        .plant-tile:hover { transform: translateY(-5px); }
+        .tile-name { font-size: 18px; font-weight: 500; text-transform: uppercase; }
+        .tile-icon { font-size: 40px; opacity: 0.3; }
+
+        /* Breadcrumb/Back */
+        .breadcrumb-nav {
+            margin-bottom: 15px; font-size: 14px; color: #666;
+        }
+        .breadcrumb-nav span { cursor: pointer; color: var(--primary-color); }
+        .breadcrumb-nav span:hover { text-decoration: underline; }
+
+        /* Module Header */
+        .module-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .module-title { font-size: 20px; font-weight: 500; color: #333; }
+        .module-actions { display: flex; gap: 10px; }
+
+        /* UI Elements */
+        .btn {
+            padding: 8px 16px; border-radius: 4px; border: none; cursor: pointer;
+            font-size: 13px; display: inline-flex; align-items: center; gap: 8px; transition: background 0.2s;
+        }
+        .btn-primary { background-color: var(--primary-color); color: white; }
+        .btn-primary:hover { background-color: #357abd; }
+        .btn-success { background-color: var(--success-color); color: white; }
+        .btn-secondary { background-color: #9e9e9e; color: white; }
+        .btn-outline { background-color: white; border: 1px solid #ccc; color: #555; }
+        .btn-outline:hover { background-color: #f5f5f5; border-color: #bbb; }
+        .btn-icon-only { background: none; border: none; color: #666; font-size: 16px; padding: 5px; }
+        .btn-icon-only:hover { color: var(--primary-color); }
+
+        .data-card {
+            background: white; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden; margin-bottom: 20px;
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            text-align: left; padding: 12px 15px; background-color: #f8f9fa;
+            border-bottom: 2px solid var(--border-color); font-size: 12px; font-weight: 600; color: #555;
+            position: sticky; top: 0; z-index: 5; white-space: nowrap;
+        }
+        td { padding: 10px 15px; border-bottom: 1px solid #eee; font-size: 13px; vertical-align: middle; }
+        tr.edit-mode { background-color: var(--edit-mode-bg) !important; }
+        tr:hover { background-color: var(--row-hover); }
+
+        .form-input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+        .form-input:disabled { background-color: #f0f0f0; color: #666; cursor: not-allowed; }
+        .error-msg { color: var(--danger-color); font-size: 12px; margin-top: 4px; display: none; }
+        .search-input { width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px; font-size: 11px; margin-top: 5px; }
+
+        .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--inactive-toggle); transition: .4s; border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px;
+            background-color: white; transition: .4s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--active-toggle); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; }
+        .status-active { background-color: #e8f5e9; color: #2e7d32; }
+        .status-inactive { background-color: #f5f5f5; color: #616161; }
+        
+        /* Validation Highlights */
+        .cell-pass { background-color: var(--cell-pass); color: #155724; font-weight: 600;}
+        .cell-fail { background-color: var(--cell-fail); color: #721c24; font-weight: 600;}
+
+        /* Assign Lab Properties Specifics */
+        .alp-layout { display: flex; flex-direction: column; gap: 20px; }
+        .alp-header-card { background: white; padding: 20px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .alp-field-row { display: flex; gap: 30px; margin-bottom: 15px; }
+        .alp-field-group { flex: 1; }
+        .alp-label { display: block; font-size: 13px; font-weight: 600; color: #555; margin-bottom: 8px; }
+        .alp-textarea { width: 100%; height: 100px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9; font-size: 13px; resize: none; }
+        
+        .tab-container { margin-top: 20px; border-bottom: 1px solid #ddd; }
+        .tab { padding: 10px 20px; cursor: pointer; font-weight: 500; color: #666; display: inline-block; border-bottom: 3px solid transparent; }
+        .tab.active { border-bottom-color: var(--primary-color); color: var(--primary-color); }
+
+        /* Settings Card */
+        .settings-card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); max-width: 800px; }
+        .permission-section-title { background-color: #f8f9fa; padding: 10px; font-weight: 600; border-bottom: 2px solid #e0e0e0; margin-top: 20px; color: #555; }
+        .permission-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #eee; }
+        .perm-info { font-size: 14px; color: #444; }
+        .perm-desc { font-size: 12px; color: #888; margin-top: 4px; }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5);
+            display: none; justify-content: center; align-items: center; z-index: 1000;
+        }
+        .modal { background: white; border-radius: 8px; width: 600px; max-width: 90%; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+        .modal-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .modal-title { font-weight: 600; font-size: 16px; }
+        .modal-body { padding: 20px; overflow-y: auto; }
+        .modal-footer { padding: 15px 20px; border-top: 1px solid #eee; text-align: right; }
+
+        /* Toast */
+        .toast {
+            position: fixed; bottom: 30px; right: 30px; background-color: #323232; color: white; padding: 12px 24px;
+            border-radius: 4px; font-size: 14px; opacity: 0; transform: translateY(20px); transition: all 0.3s; z-index: 2000;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .toast.success { background-color: var(--success-color); }
+        .toast.error { background-color: var(--danger-color); }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo-area" id="logo-area">
+            <div class="logo-text" id="default-logo">e <span>QLM</span></div>
+        </div>
+        <ul class="nav-menu">
+            <li class="nav-item">
+                <a class="nav-link active" id="nav-dashboard" onclick="switchView('view-dashboard', this)"><i class="fas fa-chart-bar nav-icon"></i> Dashboard</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link"><i class="fas fa-flask nav-icon"></i> LabWorks <i class="fas fa-chevron-left nav-arrow"></i></a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" onclick="toggleSubmenu('user-submenu')"><i class="fas fa-users nav-icon"></i> User Management <i class="fas fa-chevron-down nav-arrow"></i></a>
+                <ul class="submenu" id="user-submenu">
+                     <li class="submenu-item" onclick="switchView('view-roles', null, this)"><i class="far fa-circle" style="font-size: 8px; margin-right: 10px;"></i> Roles</li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" onclick="toggleSubmenu('config-submenu')">
+                    <i class="fas fa-cog nav-icon"></i> Configuration <i class="fas fa-chevron-down nav-arrow"></i>
+                </a>
+                <ul class="submenu" id="config-submenu">
+                    <li class="submenu-item" onclick="switchView('view-app-settings', null, this)"><i class="far fa-circle" style="font-size: 8px; margin-right: 10px;"></i> Application Settings</li>
+                    <li class="submenu-item"><i class="far fa-circle" style="font-size: 8px; margin-right: 10px;"></i> Workflows</li>
+                    <li class="submenu-item" onclick="toggleSubmenu('library-submenu')">
+                        <i class="far fa-circle" style="font-size: 8px; margin-right: 10px;"></i> Library 
+                        <i class="fas fa-chevron-down" style="font-size: 8px; margin-left: auto;"></i>
+                    </li>
+                    <ul class="submenu" id="library-submenu" style="padding-left: 20px; background-color: #f1f1f1;">
+                        <li class="submenu-item" onclick="switchView('view-master-list', null, this)">Master List</li>
+                        <li class="submenu-item" onclick="switchView('view-placeholder', null, this, 'Line Library')">Line</li>
+                        <li class="submenu-item" onclick="switchView('view-placeholder', null, this, 'Length Library')">Length</li>
+                        <li class="submenu-item" onclick="switchView('view-assign-lab', null, this)">Assign Lab Properties</li>
+                    </ul>
+                    <li class="submenu-item"><i class="far fa-circle" style="font-size: 8px; margin-right: 10px;"></i> Email Templates</li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link"><i class="fas fa-file-alt nav-icon"></i> Reports <i class="fas fa-chevron-left nav-arrow"></i></a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Top Header -->
+        <header class="top-header">
+            <div class="page-title" id="page-title-display">Plant Dashboard</div>
+            <div class="header-actions">
+                <i class="fas fa-search header-icon"></i>
+                <i class="fas fa-expand header-icon"></i>
+                <i class="fas fa-bars header-icon"></i>
+                <div class="user-profile">SM</div>
+            </div>
+        </header>
+
+        <!-- Body -->
+        <div class="content-body" id="main-scroll-area">
+            
+            <!-- VIEW: DASHBOARD ROOTS -->
+            <div id="view-dashboard" class="view-section active-view">
+                <div class="dashboard-container">
+                    <div class="plant-tile" onclick="switchView('view-plant-winchester')">
+                        <div class="tile-name">WINCHESTER</div>
+                        <i class="fas fa-industry tile-icon"></i>
+                    </div>
+                    <div class="plant-tile" style="opacity: 0.6; cursor: default;">
+                        <div class="tile-name">FERNLEY</div>
+                        <i class="fas fa-industry tile-icon"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: WINCHESTER -->
+            <div id="view-plant-winchester" class="view-section">
+                <div class="breadcrumb-nav">
+                    <span onclick="switchView('view-dashboard')">Dashboard</span> > Winchester
+                </div>
+                <div class="dashboard-container">
+                    <div class="plant-tile" onclick="switchView('view-section-decking')">
+                        <div class="tile-name">Decking</div>
+                        <i class="fas fa-layer-group tile-icon"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: DECKING -->
+            <div id="view-section-decking" class="view-section">
+                <div class="breadcrumb-nav">
+                    <span onclick="switchView('view-dashboard')">Dashboard</span> > 
+                    <span onclick="switchView('view-plant-winchester')">Winchester</span> > Decking
+                </div>
+                <div class="dashboard-container">
+                    <div class="plant-tile" onclick="switchView('view-buildings')">
+                        <div class="tile-name">Building 1</div>
+                        <i class="fas fa-building tile-icon"></i>
+                    </div>
+                    <div class="plant-tile" onclick="switchView('view-buildings')">
+                        <div class="tile-name">Building 4</div>
+                        <i class="fas fa-building tile-icon"></i>
+                    </div>
+                    <div class="plant-tile" onclick="switchView('view-buildings')">
+                        <div class="tile-name">Building 6</div>
+                        <i class="fas fa-building tile-icon"></i>
+                    </div>
+                </div>
+            </div>
+
+             <!-- VIEW: BUILDINGS (Intermediate) -->
+             <div id="view-buildings" class="view-section">
+                <div class="breadcrumb-nav">
+                    <span onclick="switchView('view-dashboard')">Dashboard</span> > 
+                    <span onclick="switchView('view-plant-winchester')">Winchester</span> > 
+                    <span onclick="switchView('view-section-decking')">Decking</span> > Building Selection
+                </div>
+                <div class="dashboard-container">
+                    <div class="plant-tile" onclick="switchView('view-embossing-dashboard')">
+                        <div class="tile-name">Embossing</div>
+                        <i class="fas fa-stamp tile-icon"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: EMBOSSING DASHBOARD -->
+            <div id="view-embossing-dashboard" class="view-section">
+                <div class="breadcrumb-nav">
+                    <!-- Static Full Path as requested -->
+                    <span onclick="switchView('view-dashboard')">Dashboard</span> > 
+                    <span onclick="switchView('view-plant-winchester')">Winchester</span> > 
+                    <span onclick="switchView('view-section-decking')">Decking</span> > 
+                    <span onclick="switchView('view-buildings')">Building 1</span> > Embossing
+                </div>
+                <div class="module-header">
+                    <h2 class="module-title">Embossing Dashboard</h2>
+                    <button class="btn btn-primary" id="add-dash-btn" onclick="startAddDashboardRow()">
+                        <i class="fas fa-plus"></i> Add New Record
+                    </button>
+                </div>
+                <div class="data-card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Action</th>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Line</th>
+                                <th>Profile</th>
+                                <th>Color</th>
+                                <th>Length</th>
+                                <th>Measure 1</th>
+                                <th>Measure 2</th>
+                                <th>Measure 3</th>
+                                <th>Average</th>
+                                <th>Created By</th>
+                            </tr>
+                        </thead>
+                        <tbody id="embossing-table-body">
+                            <!-- JS Generated -->
+                        </tbody>
+                    </table>
+                </div>
+                 <div style="height: 50px;"></div>
+            </div>
+
+
+            <!-- VIEW: MASTER LIST -->
+            <div id="view-master-list" class="view-section">
+                <div class="module-header">
+                    <h2 class="module-title">Master List</h2>
+                    <div class="module-actions">
+                        <button class="btn btn-outline" onclick="downloadTemplate()">
+                            <i class="fas fa-download"></i> Download Template
+                        </button>
+                        <button class="btn btn-outline" onclick="document.getElementById('import-file').click()">
+                            <i class="fas fa-file-import"></i> Import Excel
+                        </button>
+                        <input type="file" id="import-file" accept=".csv, .xlsx" style="display:none" onchange="importMasterList(event)">
+                        <button class="btn btn-outline" onclick="exportMasterList()">
+                            <i class="fas fa-file-export"></i> Export Data
+                        </button>
+                        <button class="btn btn-primary" id="add-master-btn" onclick="startAddNewMaster()">
+                            <i class="fas fa-plus"></i> Add New
+                        </button>
+                    </div>
+                </div>
+                <div class="data-card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th width="10%">Action</th>
+                                <th width="5%">Sl. No.
+                                    <input type="text" class="search-input" onkeyup="filterMasterTable(1, this.value)" placeholder="Search">
+                                </th>
+                                <th width="12%">Product Line
+                                    <input type="text" class="search-input" onkeyup="filterMasterTable(2, this.value)" placeholder="Search">
+                                </th>
+                                <th width="12%">Profile Type
+                                    <input type="text" class="search-input" onkeyup="filterMasterTable(3, this.value)" placeholder="Search">
+                                </th>
+                                <th width="12%">Profile
+                                    <input type="text" class="search-input" onkeyup="filterMasterTable(4, this.value)" placeholder="Search">
+                                </th>
+                                <th width="12%">Color
+                                    <input type="text" class="search-input" onkeyup="filterMasterTable(5, this.value)" placeholder="Search">
+                                </th>
+                                <th width="10%">Length (ft.)
+                                    <input type="text" class="search-input" onkeyup="filterMasterTable(6, this.value)" placeholder="Search">
+                                </th>
+                                <th width="12%">Bundle SKU
+                                    <input type="text" class="search-input" onkeyup="filterMasterTable(7, this.value)" placeholder="Search">
+                                </th>
+                                <th width="15%">Description
+                                    <input type="text" class="search-input" onkeyup="filterMasterTable(8, this.value)" placeholder="Search">
+                                </th>
+                                <th width="5%">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="master-table-body">
+                            <!-- JS populated -->
+                        </tbody>
+                    </table>
+                </div>
+                <div style="height: 50px;"></div>
+            </div>
+
+            <!-- VIEW: ASSIGN LAB PROPERTIES -->
+            <div id="view-assign-lab" class="view-section">
+                <div class="module-header">
+                    <h2 class="module-title">Assign Lab Properties</h2>
+                </div>
+                
+                <div class="alp-layout">
+                    <!-- Selector Card -->
+                    <div class="alp-header-card">
+                        <div class="alp-field-row">
+                            <div class="alp-field-group">
+                                <label class="alp-label">Select Lab <span style="color:red">*</span></label>
+                                <select class="form-input" id="lab-selector" onchange="handleLabSelection()">
+                                    <option value="">-- Select Lab --</option>
+                                    <!-- Populated by JS -->
+                                </select>
+                            </div>
+                        </div>
+                        <div class="alp-field-group">
+                            <label class="alp-label">Affected Locations</label>
+                            <textarea class="alp-textarea" id="affected-locations" readonly></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Config Table Section (Hidden by default) -->
+                    <div id="lab-config-section" style="display:none;">
+                        <div class="tab-container">
+                            <div class="tab active">Configuration</div>
+                        </div>
+                        <div style="margin-top: 15px; display: flex; justify-content: flex-end;">
+                            <button class="btn btn-primary" id="add-config-btn" onclick="startAddNewConfig()">
+                                <i class="fas fa-plus"></i> Add Configuration
+                            </button>
+                        </div>
+                        <div class="data-card" style="margin-top: 10px;">
+                            <table style="font-size: 12px;">
+                                <thead>
+                                    <tr>
+                                        <th rowspan="2" width="80px">Action</th>
+                                        <th rowspan="2">Product Line</th>
+                                        <th rowspan="2">Profile Type</th>
+                                        <th rowspan="2">Profile</th>
+                                        <th rowspan="2">Color</th>
+                                        <th rowspan="2">Length</th>
+                                        <th rowspan="2">Bundle SKU</th>
+                                        <th rowspan="2">Description</th>
+                                        <th colspan="2" style="text-align:center; border-bottom: 1px solid #ddd;">Average</th>
+                                        <th rowspan="2">Status</th>
+                                        <th rowspan="2" style="text-align: center;">History</th>
+                                    </tr>
+                                    <tr>
+                                        <th>Min</th>
+                                        <th>Max</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="config-table-body"></tbody>
+                            </table>
+                        </div>
+                         <div style="height: 50px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: APPLICATION SETTINGS -->
+            <div id="view-app-settings" class="view-section">
+                <div class="module-header"><h2 class="module-title">Application Settings</h2></div>
+                <div class="settings-card">
+                    <div class="form-group">
+                        <label class="form-label">Software Logo Update</label>
+                        <input type="file" id="logo-upload" accept="image/*" class="form-input" onchange="handleLogoUpload(event)">
+                    </div>
+                    <div class="form-group">
+                        <button class="btn btn-primary" onclick="showToast('Settings Saved', 'success')">Save Settings</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: ROLES -->
+            <div id="view-roles" class="view-section">
+                <div class="module-header"><h2 class="module-title">User Roles</h2></div>
+                <div class="settings-card">
+                    <div style="margin-bottom: 10px;">
+                        <h3 style="margin-bottom: 5px; font-size: 16px;">Role Permissions</h3>
+                        <p style="color: #666; font-size: 13px;">Simulate user permissions.</p>
+                    </div>
+
+                    <div class="permission-section-title">Master List</div>
+                    <div class="permission-item">
+                        <div class="perm-info">Create (New)</div>
+                        <label class="switch"><input type="checkbox" id="perm-new" checked onchange="updatePermissions()"><span class="slider"></span></label>
+                    </div>
+                    <div class="permission-item">
+                        <div class="perm-info">Edit</div>
+                        <label class="switch"><input type="checkbox" id="perm-edit" checked onchange="updatePermissions()"><span class="slider"></span></label>
+                    </div>
+                     <div class="permission-item">
+                        <div class="perm-info">Delete</div>
+                        <label class="switch"><input type="checkbox" id="perm-delete" checked onchange="updatePermissions()"><span class="slider"></span></label>
+                    </div>
+
+                    <div class="permission-section-title">Lab Configuration</div>
+                    <div class="permission-item">
+                        <div class="perm-info">Create (New)</div>
+                        <label class="switch"><input type="checkbox" id="perm-config-new" checked onchange="updatePermissions()"><span class="slider"></span></label>
+                    </div>
+                    <div class="permission-item">
+                        <div class="perm-info">Edit</div>
+                        <label class="switch"><input type="checkbox" id="perm-config-edit" checked onchange="updatePermissions()"><span class="slider"></span></label>
+                    </div>
+                    <div class="permission-item">
+                        <div class="perm-info">Delete</div>
+                        <label class="switch"><input type="checkbox" id="perm-config-delete" checked onchange="updatePermissions()"><span class="slider"></span></label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: GENERIC PLACEHOLDER -->
+            <div id="view-placeholder" class="view-section">
+                <div class="module-header"><h2 class="module-title" id="placeholder-title">Library</h2></div>
+                <div class="data-card" style="padding: 40px; text-align: center; color: #999;">
+                    <i class="fas fa-tools" style="font-size: 40px; margin-bottom: 15px;"></i>
+                    <p>This module is currently under development.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div class="modal-overlay" id="history-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title" id="history-title">History</div>
+                <i class="fas fa-times" style="cursor: pointer;" onclick="closeHistory()"></i>
+            </div>
+            <div class="modal-body">
+                <table class="history-table">
+                    <thead><tr><th>Date</th><th>Action</th><th>User</th><th>Details</th></tr></thead>
+                    <tbody id="history-content"></tbody>
+                </table>
+            </div>
+            <div class="modal-footer"><button class="btn btn-secondary" onclick="closeHistory()">Close</button></div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">Message here</div>
+
+    <script>
+        // --- UTILS (Hoisted to top) ---
+        function getFormattedDate() {
+            const now = new Date();
+            const pad = n => n < 10 ? '0'+n : n;
+            return `${pad(now.getDate())}-${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()]}-${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        }
+        function showHistory(type, id) {
+            let item;
+            if(type=='master') item = state.masterList.find(i=>i.id==id);
+            if(type=='config') item = state.labConfigs[state.selectedLab].find(i=>i.id==id);
+            if(type=='dash') item = state.embossingData.find(i=>i.id==id); 
+            
+            if(type=='dash' && !item.history) item.history = [{ date: item.date + ' ' + item.time, action: 'Created', user: item.createdBy, details: 'Record created' }];
+
+            if(!item) return;
+
+            document.getElementById('history-title').innerText = `History - ${type}`;
+            const hb = document.getElementById('history-content'); hb.innerHTML = '';
+            item.history.forEach(h => {
+                hb.innerHTML += `<tr><td>${h.date}</td><td>${h.action}</td><td>${h.user}</td><td>${h.details}</td></tr>`;
+            });
+            document.getElementById('history-modal').style.display = 'flex';
+        }
+        function closeHistory() { document.getElementById('history-modal').style.display = 'none'; }
+        function showInlineError(el, msg) { el.innerText = msg; el.style.display = 'block'; }
+        function showToast(msg, type) { toast.innerText = msg; toast.className = `toast ${type} show`; setTimeout(() => toast.className = 'toast', 3000); }
+        function handleLogoUpload(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    document.getElementById('logo-area').innerHTML = `<img src="${evt.target.result}" class="logo-img" alt="Logo">`;
+                    showToast('Logo updated', 'success');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // --- EXCEL SIMULATION UTILS ---
+        function downloadCSV(csv, filename) {
+            var csvFile;
+            var downloadLink;
+            csvFile = new Blob([csv], {type: "text/csv"});
+            downloadLink = document.createElement("a");
+            downloadLink.download = filename;
+            downloadLink.href = window.URL.createObjectURL(csvFile);
+            downloadLink.style.display = "none";
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+        }
+
+        function downloadTemplate() {
+            const headers = "Product Line,Profile Type,Profile,Color,Length (ft.),Bundle SKU,Description";
+            downloadCSV(headers, "MasterList_Template.csv");
+        }
+
+        function exportMasterList() {
+            let csv = "Product Line,Profile Type,Profile,Color,Length (ft.),Bundle SKU,Description,Status\n";
+            state.masterList.forEach(row => {
+                csv += `"${row.prodLine}","${row.type}","${row.profile}","${row.color}","${row.length}","${row.sku}","${row.desc}","${row.status?'Active':'Inactive'}"\n`;
+            });
+            downloadCSV(csv, "MasterList_Export.csv");
+        }
+
+        function importMasterList(event) {
+            const file = event.target.files[0];
+            if(!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const rows = text.split("\n");
+                // Remove empty rows
+                const validRows = rows.filter(r => r.trim() !== "");
+                
+                // Validate Header
+                const expectedHeaders = ["Product Line", "Profile Type", "Profile", "Color", "Length (ft.)", "Bundle SKU", "Description"];
+                const headerRow = validRows[0].split(",");
+                const cleanHeaders = headerRow.map(h => h.replace(/"/g, "").trim());
+                
+                // Simple validation check: ensure at least first few match
+                if(cleanHeaders[0] !== expectedHeaders[0] || cleanHeaders[3] !== expectedHeaders[3]) {
+                    alert("Invalid template format. Please download the template and try again.");
+                    return;
+                }
+
+                let addedCount = 0;
+                let skipCount = 0;
+
+                for(let i=1; i<validRows.length; i++) {
+                    const cols = validRows[i].split(","); // Simple split - assumes no commas in data for prototype
+                    if(cols.length < 7) continue;
+
+                    const pl = cols[0].replace(/"/g, "").trim();
+                    const pt = cols[1].replace(/"/g, "").trim();
+                    const p = cols[2].replace(/"/g, "").trim();
+                    const c = cols[3].replace(/"/g, "").trim();
+                    const l = cols[4].replace(/"/g, "").trim();
+                    const sku = cols[5].replace(/"/g, "").trim();
+                    const desc = cols[6].replace(/"/g, "").trim();
+
+                    // Duplicate Check
+                    const exists = state.masterList.some(r => 
+                        r.prodLine.toLowerCase() === pl.toLowerCase() &&
+                        r.type.toLowerCase() === pt.toLowerCase() &&
+                        r.profile.toLowerCase() === p.toLowerCase() &&
+                        r.color.toLowerCase() === c.toLowerCase() &&
+                        r.length.toLowerCase() === l.toLowerCase() &&
+                        r.sku.toLowerCase() === sku.toLowerCase()
+                    );
+
+                    if (!exists && pl && pt && p && c) {
+                        state.masterList.push({
+                            id: Date.now() + i,
+                            slNo: state.nextMasterSlNo++,
+                            prodLine: pl, type: pt, profile: p, color: c, length: l, sku: sku, desc: desc,
+                            status: true,
+                            history: [{ date: getFormattedDate(), action: 'Imported', user: 'Admin', details: 'Bulk Import' }]
+                        });
+                        addedCount++;
+                    } else {
+                        skipCount++;
+                    }
+                }
+                
+                renderMasterTable();
+                showToast(`Import Complete. Added: ${addedCount}, Skipped/Duplicate: ${skipCount}`, 'success');
+                event.target.value = ''; // Reset input
+            };
+            reader.readAsText(file);
+        }
+
+        function filterMasterTable(colIndex, searchText) {
+            const table = document.getElementById("master-table-body");
+            const trs = table.getElementsByTagName("tr");
+            const filter = searchText.toLowerCase();
+
+            // We need to keep track of rows that are visible based on ALL active filters
+            // For this simple implementation, we will re-evaluate visibility for all rows
+            // by checking ALL filter inputs every time any input changes.
+            
+            const headers = document.querySelectorAll("#view-master-list th input.search-input");
+            const filters = [];
+            headers.forEach((input, index) => {
+               // Column indexes in th inputs map to: SlNo=1, ProdLine=2... etc (Action is 0)
+               // The inputs are inside THs. Let's get the parent TH index.
+               const th = input.parentElement;
+               // Get index of th among all ths in that row
+               const thIndex = Array.from(th.parentNode.children).indexOf(th);
+               filters[thIndex] = input.value.toLowerCase();
+            });
+
+            for (let i = 0; i < trs.length; i++) {
+                const tr = trs[i];
+                if (tr.classList.contains('edit-mode')) continue; // Don't filter edit row
+
+                let showRow = true;
+                const tds = tr.getElementsByTagName("td");
+
+                // Check each active filter
+                for (let colIdx in filters) {
+                    const searchVal = filters[colIdx];
+                    if (searchVal) {
+                        // tds index matches th index
+                        const td = tds[colIdx];
+                        if (td) {
+                            const txtValue = td.textContent || td.innerText;
+                            if (txtValue.toLowerCase().indexOf(searchVal) === -1) {
+                                showRow = false;
+                                break;
+                            }
+                        }
+                    }
+                }
+                tr.style.display = showRow ? "" : "none";
+            }
+        }
+
+        // --- CONSTANTS ---
+        const LAB_OPTIONS = [
+            "Adhesive Weight", "Bow Results", "Bulge", "Embossing", "Flatness", 
+            "Incoming Raw Material", "Load Testing", "Moisture", "Mono Color", "Offset", 
+            "Peel Strength", "QC Checks", "QC Offline Sample Test", "Railing Color Dashboard", 
+            "Shell Stock", "Shell Thickness", "Ski-tipping", "Streak Color", "Streaker Testing", 
+            "Strength", "Surface Energy", "Thickness", "TSC", 
+            "VMM Dimension Documentation Dashboard", "Width"
+        ];
+
+        const EMBOSSING_LOCATIONS = `Embossing (Fernley > Decking )
+Embossing (Winchester > Decking > Building 1 )
+Embossing (Winchester > Decking > Building 4 )
+Embossing (Winchester > Decking > Building 6 )`;
+
+        // --- STATE ---
+        const state = {
+            // Permissions
+            permissions: { new: true, edit: true, delete: true },
+            configPermissions: { new: true, edit: true, delete: true },
+
+            // Master List with Pre-loaded Data
+            nextMasterSlNo: 100, // starting point for next inserts
+            masterList: [
+                { id: 1, slNo: 1, prodLine: "Enhance 2.0", type: "1 x 6", profile: "Grooved", color: "Beach Dune", length: "12", sku: "BD010612E2G56", desc: '1" x 6" x 12\' EnhanceG2 GV - BD', status: true, history: [] },
+                { id: 2, slNo: 2, prodLine: "Enhance 2.0", type: "1 x 6", profile: "Square", color: "Beach Dune", length: "12", sku: "BD010612E2S56", desc: '1" x 6" x 12\' EnhanceG2 SQ - BD', status: true, history: [] },
+                { id: 3, slNo: 3, prodLine: "Enhance 2.0", type: "1 x 6", profile: "Grooved", color: "Beach Dune", length: "16", sku: "BD010616E2G56", desc: '1" x 6" x 16\' EnhanceG2 GV - BD', status: true, history: [] },
+                { id: 4, slNo: 4, prodLine: "Enhance 2.0", type: "1 x 6", profile: "Square", color: "Beach Dune", length: "16", sku: "BD010616E2S56", desc: '1" x 6" x 16\' EnhanceG2 SQ - BD', status: true, history: [] },
+                { id: 5, slNo: 5, prodLine: "Enhance 2.0", type: "1 x 6", profile: "Grooved", color: "Beach Dune", length: "20", sku: "BD010620E2G56", desc: '1" x 6" x 20\' EnhanceG2 GV - BD', status: true, history: [] },
+                { id: 6, slNo: 6, prodLine: "Enhance 2.0", type: "1 x 6", profile: "Square", color: "Beach Dune", length: "20", sku: "BD010620E2S56", desc: '1" x 6" x 20\' EnhanceG2 SQ - BD', status: true, history: [] },
+                { id: 7, slNo: 7, prodLine: "Enhance 2.0", type: "1 x 6", profile: "Grooved", color: "Calm Water", length: "12", sku: "CW010612E2G56", desc: '1" x 6" x 12\' EnhanceG2 GV - CW', status: true, history: [] },
+                { id: 8, slNo: 8, prodLine: "Enhance 2.0", type: "1 x 6", profile: "Square", color: "Calm Water", length: "12", sku: "CW010612E2S56", desc: '1" x 6" x 12\' EnhanceG2 SQ - CW', status: true, history: [] },
+                { id: 9, slNo: 9, prodLine: "Enhance 2.0", type: "1 x 6", profile: "Grooved", color: "Calm Water", length: "16", sku: "CW010616E2G56", desc: '1" x 6" x 16\' EnhanceG2 GV - CW', status: true, history: [] },
+                { id: 10, slNo: 10, prodLine: "Enhance 2.0", type: "1 x 6", profile: "Square", color: "Calm Water", length: "16", sku: "CW010616E2S56", desc: '1" x 6" x 16\' EnhanceG2 SQ - CW', status: true, history: [] },
+                // ... (Truncated for brevity in code, but conceptually all 100+ records would be here)
+                { id: 99, slNo: 99, prodLine: "Select", type: "1 x 6", profile: "Grooved", color: "Saddle", length: "12", sku: "SD010612SG64", desc: '1" x 6" x 12\' Select GV - SD', status: true, history: [] }
+            ],
+            
+            // Lab Configurations { labName: [records] }
+            labConfigs: {
+                "Embossing": [] // Empty initially
+            },
+            
+            // Dashboard Data
+            embossingData: [],
+
+            // Edit States - Master List
+            editingMasterId: null, isCreatingMaster: false,
+
+            // Config Edit States
+            selectedLab: "",
+            editingConfigId: null, isCreatingConfig: false,
+
+            // Dashboard Edit States
+            editingDashId: null, isCreatingDash: false
+        };
+
+        // Init History
+        const initHistory = (item) => item.history.push({ date: getFormattedDate(), action: 'Created', user: 'Admin', details: 'Initial Load' });
+        state.masterList.forEach(initHistory);
+
+        // --- DOM Elements ---
+        const masterTableBody = document.getElementById('master-table-body');
+        const configTableBody = document.getElementById('config-table-body');
+        const dashTableBody = document.getElementById('embossing-table-body');
+        const toast = document.getElementById('toast');
+        const mainScrollArea = document.getElementById('main-scroll-area');
+
+        // --- INIT ---
+        function init() {
+            // Populate Lab Dropdown
+            const sel = document.getElementById('lab-selector');
+            LAB_OPTIONS.forEach(opt => {
+                const el = document.createElement('option');
+                el.value = opt; el.innerText = opt;
+                sel.appendChild(el);
+            });
+            renderMasterTable(); renderConfigTable(); renderDashTable();
+        }
+
+        // --- Navigation ---
+        function switchView(viewId, navElement, subNavElement, titleOverride) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active-view'));
+            document.getElementById(viewId).classList.add('active-view');
+            
+            const titleMap = {
+                'view-dashboard': 'Plant Dashboard',
+                'view-plant-winchester': 'Plant Dashboard > Winchester',
+                'view-section-decking': 'Winchester > Decking',
+                'view-buildings': 'Decking > Buildings',
+                'view-embossing-dashboard': 'Embossing Dashboard',
+                'view-master-list': 'Master List',
+                'view-assign-lab': 'Assign Lab Properties',
+                'view-app-settings': 'Application Settings',
+                'view-roles': 'User Management',
+                'view-placeholder': titleOverride || 'Library'
+            };
+            document.getElementById('page-title-display').innerText = titleMap[viewId] || 'Dashboard';
+            if(viewId === 'view-placeholder' && titleOverride) document.getElementById('placeholder-title').innerText = titleOverride;
+
+            if (navElement || subNavElement) {
+                document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+                document.querySelectorAll('.submenu-item').forEach(el => el.classList.remove('active-sub'));
+                if (navElement) navElement.classList.add('active');
+                if (subNavElement) subNavElement.classList.add('active-sub');
+            }
+        }
+        function toggleSubmenu(id) {
+            const el = document.getElementById(id);
+            if (el.style.display === 'block') el.style.display = 'none'; else el.style.display = 'block';
+        }
+
+        // ==========================================
+        // --- MASTER LIST LOGIC ---
+        // ==========================================
+        function renderMasterTable() {
+            masterTableBody.innerHTML = '';
+            
+            // New Row
+            if (state.isCreatingMaster) {
+                const tr = document.createElement('tr');
+                tr.className = 'edit-mode';
+                tr.innerHTML = `
+                    <td>
+                        <button class="btn btn-success btn-sm" onclick="saveNewMaster()"><i class="fas fa-check"></i></button>
+                        <button class="btn btn-secondary btn-sm" onclick="cancelMaster()"><i class="fas fa-times"></i></button>
+                    </td>
+                    <td>${state.nextMasterSlNo}</td>
+                    <td><input class="form-input" id="new-m-pl"></td>
+                    <td><input class="form-input" id="new-m-pt"></td>
+                    <td><input class="form-input" id="new-m-p"></td>
+                    <td><input class="form-input" id="new-m-c"></td>
+                    <td><input class="form-input" id="new-m-l"></td>
+                    <td><input class="form-input" id="new-m-sku"></td>
+                    <td><input class="form-input" id="new-m-desc"></td>
+                    <td><span class="status-badge status-active">Active</span></td>
+                `;
+                masterTableBody.appendChild(tr);
+            }
+
+            state.masterList.forEach(row => {
+                const isEditing = state.editingMasterId === row.id;
+                const tr = document.createElement('tr');
+                if(isEditing) tr.className = 'edit-mode';
+
+                if (isEditing) {
+                    tr.innerHTML = `
+                        <td>
+                            <button class="btn btn-primary btn-sm" onclick="saveMaster(${row.id})">Save</button>
+                            <button class="btn btn-secondary btn-sm" onclick="cancelMaster()">X</button>
+                        </td>
+                        <td>${row.slNo}</td>
+                        <td>${row.prodLine}</td>
+                        <td>${row.type}</td>
+                        <td>${row.profile}</td>
+                        <td>${row.color}</td>
+                        <td>${row.length}</td>
+                        <td>${row.sku}</td>
+                        <td>${row.desc}</td>
+                        <td>
+                            <label class="switch"><input type="checkbox" id="m-status-${row.id}" ${row.status?'checked':''}><span class="slider"></span></label>
+                        </td>
+                    `;
+                } else {
+                    tr.innerHTML = `
+                        <td>
+                            <button class="btn btn-icon-only" onclick="showHistory('master', ${row.id})"><i class="fas fa-history"></i></button>
+                            ${state.permissions.edit ? `<button class="btn btn-icon-only" onclick="startEditMaster(${row.id})"><i class="fas fa-pencil-alt"></i></button>` : ''}
+                        </td>
+                        <td>${row.slNo}</td>
+                        <td>${row.prodLine}</td>
+                        <td>${row.type}</td>
+                        <td>${row.profile}</td>
+                        <td>${row.color}</td>
+                        <td>${row.length}</td>
+                        <td>${row.sku}</td>
+                        <td>${row.desc}</td>
+                        <td><span class="status-badge ${row.status?'status-active':'status-inactive'}">${row.status?'Active':'Inactive'}</span></td>
+                    `;
+                }
+                masterTableBody.appendChild(tr);
+            });
+        }
+
+        function startAddNewMaster() {
+            state.isCreatingMaster = true;
+            state.editingMasterId = null;
+            renderMasterTable();
+        }
+        function cancelMaster() {
+            state.isCreatingMaster = false;
+            state.editingMasterId = null;
+            renderMasterTable();
+        }
+        function startEditMaster(id) {
+            state.isCreatingMaster = false;
+            state.editingMasterId = id;
+            renderMasterTable();
+        }
+
+        function saveNewMaster() {
+            const pl = document.getElementById('new-m-pl').value.trim();
+            const pt = document.getElementById('new-m-pt').value.trim();
+            const p = document.getElementById('new-m-p').value.trim();
+            const c = document.getElementById('new-m-c').value.trim();
+            const l = document.getElementById('new-m-l').value.trim();
+            const sku = document.getElementById('new-m-sku').value.trim();
+            const desc = document.getElementById('new-m-desc').value.trim();
+
+            if (!pl || !pt || !p || !c || !l || !sku || !desc) {
+                alert("All fields are mandatory."); return;
+            }
+
+            // Duplicate Check
+            const exists = state.masterList.some(r => 
+                r.prodLine.toLowerCase() === pl.toLowerCase() &&
+                r.type.toLowerCase() === pt.toLowerCase() &&
+                r.profile.toLowerCase() === p.toLowerCase() &&
+                r.color.toLowerCase() === c.toLowerCase() &&
+                r.length.toLowerCase() === l.toLowerCase() &&
+                r.sku.toLowerCase() === sku.toLowerCase()
+            );
+
+            if (exists) {
+                alert("Duplicate record exists."); return;
+            }
+
+            state.masterList.push({
+                id: Date.now(),
+                slNo: state.nextMasterSlNo++,
+                prodLine: pl, type: pt, profile: p, color: c, length: l, sku: sku, desc: desc,
+                status: true,
+                history: [{ date: getFormattedDate(), action: 'Created', user: 'Admin', details: 'Record Created' }]
+            });
+            state.isCreatingMaster = false;
+            renderMasterTable();
+            showToast("Record Added", "success");
+        }
+
+        function saveMaster(id) {
+            const row = state.masterList.find(r => r.id === id);
+            const status = document.getElementById(`m-status-${id}`).checked;
+            
+            if (row.status !== status) {
+                row.status = status;
+                row.history.unshift({ date: getFormattedDate(), action: 'Updated', user: 'Admin', details: `Status: ${status?'Active':'Inactive'}` });
+            }
+            state.editingMasterId = null;
+            renderMasterTable();
+            showToast("Record Updated", "success");
+        }
+
+
+        // ==========================================
+        // --- ASSIGN LAB PROPERTIES LOGIC ---
+        // ==========================================
+        function handleLabSelection() {
+            const val = document.getElementById('lab-selector').value;
+            state.selectedLab = val;
+            const locArea = document.getElementById('affected-locations');
+            const configSec = document.getElementById('lab-config-section');
+
+            state.editingConfigId = null; state.isCreatingConfig = false;
+
+            if (val === "Embossing") {
+                locArea.value = EMBOSSING_LOCATIONS;
+                configSec.style.display = 'block';
+                if(!state.labConfigs[val]) state.labConfigs[val] = [];
+                renderConfigTable();
+            } else if (val) {
+                locArea.value = "No specific locations mapped for this prototype.";
+                configSec.style.display = 'block';
+                if(!state.labConfigs[val]) state.labConfigs[val] = [];
+                renderConfigTable();
+            } else {
+                locArea.value = "";
+                configSec.style.display = 'none';
+            }
+        }
+
+        function renderConfigTable() {
+            configTableBody.innerHTML = '';
+            const data = state.labConfigs[state.selectedLab] || [];
+            
+            // Generate dropdown options from ACTIVE Master List records
+            const activeMasters = state.masterList.filter(m => m.status);
+            
+            // Helper to create dropdowns
+            const getOptions = (field, selectedVal) => {
+                const uniqueVals = [...new Set(activeMasters.map(m => m[field]))];
+                let opts = `<option value="">Select</option>`;
+                uniqueVals.forEach(v => {
+                    opts += `<option value="${v}" ${v === selectedVal ? 'selected' : ''}>${v}</option>`;
+                });
+                return opts;
+            };
+
+            // New Row
+            if (state.isCreatingConfig) {
+                const tr = document.createElement('tr');
+                tr.className = 'edit-mode';
+                tr.innerHTML = `
+                    <td>
+                        <button class="btn btn-success btn-sm" onclick="saveNewConfig()"><i class="fas fa-check"></i></button>
+                        <button class="btn btn-secondary btn-sm" onclick="cancelConfig()"><i class="fas fa-times"></i></button>
+                    </td>
+                    <td><select class="form-input" id="new-cfg-pl">${getOptions('prodLine')}</select></td>
+                    <td><select class="form-input" id="new-cfg-pt">${getOptions('type')}</select></td>
+                    <td><select class="form-input" id="new-cfg-p">${getOptions('profile')}</select></td>
+                    <td><select class="form-input" id="new-cfg-c">${getOptions('color')}</select></td>
+                    <td><select class="form-input" id="new-cfg-l">${getOptions('length')}</select></td>
+                    <td><select class="form-input" id="new-cfg-sku">${getOptions('sku')}</select></td>
+                    <td><select class="form-input" id="new-cfg-desc">${getOptions('desc')}</select></td>
+                    <td><input type="number" class="form-input" id="new-cfg-min" placeholder="Min" style="width:50px"></td>
+                    <td><input type="number" class="form-input" id="new-cfg-max" placeholder="Max" style="width:50px"></td>
+                    <td><span class="status-badge status-active">Active</span></td>
+                    <td style="text-align:center;"><i class="fas fa-history" style="color:#ccc;"></i></td>
+                `;
+                configTableBody.appendChild(tr);
+            }
+
+            data.forEach(item => {
+                const isEditing = state.editingConfigId === item.id;
+                const tr = document.createElement('tr');
+                if(isEditing) tr.className = 'edit-mode';
+                
+                if(isEditing) {
+                    tr.innerHTML = `
+                        <td>
+                            <button class="btn btn-primary btn-sm" onclick="saveConfig(${item.id})">Save</button>
+                            <button class="btn btn-secondary btn-sm" onclick="cancelConfig()">X</button>
+                        </td>
+                        <td><select class="form-input" id="cfg-pl-${item.id}">${getOptions('prodLine', item.prodLine)}</select></td>
+                        <td><select class="form-input" id="cfg-pt-${item.id}">${getOptions('type', item.type)}</select></td>
+                        <td><select class="form-input" id="cfg-p-${item.id}">${getOptions('profile', item.profile)}</select></td>
+                        <td><select class="form-input" id="cfg-c-${item.id}">${getOptions('color', item.color)}</select></td>
+                        <td><select class="form-input" id="cfg-l-${item.id}">${getOptions('length', item.length)}</select></td>
+                        <td><select class="form-input" id="cfg-sku-${item.id}">${getOptions('sku', item.sku)}</select></td>
+                        <td><select class="form-input" id="cfg-desc-${item.id}">${getOptions('desc', item.desc)}</select></td>
+                        <td><input type="number" class="form-input" id="cfg-min-${item.id}" value="${item.min}" style="width:50px"></td>
+                        <td><input type="number" class="form-input" id="cfg-max-${item.id}" value="${item.max}" style="width:50px"></td>
+                        <td>
+                            <label class="switch"><input type="checkbox" id="cfg-status-${item.id}" ${item.status?'checked':''}><span class="slider"></span></label>
+                        </td>
+                        <td style="text-align:center;"><i class="fas fa-history" onclick="showHistory('config', ${item.id})"></i></td>
+                    `;
+                } else {
+                    tr.innerHTML = `
+                        <td>
+                             ${state.configPermissions.edit ? 
+                                `<button class="btn btn-icon-only" onclick="startEditConfig(${item.id})"><i class="fas fa-pencil-alt"></i></button>` : 
+                                '<span style="color:#ccc; font-size:12px;">View Only</span>'
+                            }
+                        </td>
+                        <td>${item.prodLine}</td>
+                        <td>${item.type}</td>
+                        <td>${item.profile}</td>
+                        <td>${item.color}</td>
+                        <td>${item.length}</td>
+                        <td>${item.sku}</td>
+                        <td>${item.desc}</td>
+                        <td>${item.min}</td>
+                        <td>${item.max}</td>
+                        <td><span class="status-badge ${item.status?'status-active':'status-inactive'}">${item.status?'Active':'Inactive'}</span></td>
+                        <td style="text-align:center;"><i class="fas fa-history" onclick="showHistory('config', ${item.id})"></i></td>
+                    `;
+                }
+                configTableBody.appendChild(tr);
+            });
+        }
+
+        function startAddNewConfig() {
+            if(state.editingConfigId) cancelConfig();
+            state.isCreatingConfig = true;
+            renderConfigTable();
+        }
+        function startEditConfig(id) {
+            state.isCreatingConfig = false;
+            state.editingConfigId = id;
+            renderConfigTable();
+        }
+        function cancelConfig() {
+            state.isCreatingConfig = false;
+            state.editingConfigId = null;
+            renderConfigTable();
+        }
+        function saveNewConfig() {
+            const pl = document.getElementById('new-cfg-pl').value;
+            const pt = document.getElementById('new-cfg-pt').value;
+            const p = document.getElementById('new-cfg-p').value;
+            const c = document.getElementById('new-cfg-c').value;
+            const l = document.getElementById('new-cfg-l').value;
+            const sku = document.getElementById('new-cfg-sku').value;
+            const desc = document.getElementById('new-cfg-desc').value;
+            const min = document.getElementById('new-cfg-min').value;
+            const max = document.getElementById('new-cfg-max').value;
+
+            if(!pl || !pt || !p || !c || !l || !sku || !desc) { 
+                alert("All dropdown fields required"); return; 
+            }
+
+            const newRec = {
+                id: Date.now(), prodLine: pl, type: pt, profile: p, color: c, length: l, sku: sku, desc: desc,
+                min: min, max: max, status: true,
+                history: [{ date: getFormattedDate(), action: 'Created', user: 'Demo', details: 'Status: Active' }]
+            };
+            state.labConfigs[state.selectedLab].push(newRec);
+            state.isCreatingConfig = false;
+            renderConfigTable();
+            showToast("Configuration Created", "success");
+        }
+        
+        function saveConfig(id) {
+            const rec = state.labConfigs[state.selectedLab].find(i=>i.id===id);
+            rec.prodLine = document.getElementById(`cfg-pl-${id}`).value;
+            rec.type = document.getElementById(`cfg-pt-${id}`).value;
+            rec.profile = document.getElementById(`cfg-p-${id}`).value;
+            rec.color = document.getElementById(`cfg-c-${id}`).value;
+            rec.length = document.getElementById(`cfg-l-${id}`).value;
+            rec.sku = document.getElementById(`cfg-sku-${id}`).value;
+            rec.desc = document.getElementById(`cfg-desc-${id}`).value;
+            rec.min = document.getElementById(`cfg-min-${id}`).value;
+            rec.max = document.getElementById(`cfg-max-${id}`).value;
+            rec.status = document.getElementById(`cfg-status-${id}`).checked;
+
+            rec.history.unshift({ date: getFormattedDate(), action: 'Updated', user: 'Demo', details: 'Record Updated' });
+            
+            state.editingConfigId = null;
+            renderConfigTable();
+            showToast("Updated", "success");
+        }
+
+        // ==========================================
+        // --- DASHBOARD LOGIC ---
+        // ==========================================
+        // Populates dashboard dropdowns based on available ACTIVE Configs in Assign Lab Properties
+        function renderDashTable() {
+            dashTableBody.innerHTML = '';
+            const configs = state.labConfigs["Embossing"] || [];
+            
+            // Unique Lists from Configs for Dropdowns
+            const getUnique = (field) => [...new Set(configs.map(c => c[field]))];
+            const profiles = getUnique('profile');
+            const colors = getUnique('color');
+            const lines = ['Line A', 'Line B']; // Hardcoded for prototype
+            const lengths = getUnique('length');
+
+            const makeSelect = (id, opts, selected) => {
+                let h = `<select class="form-input" id="${id}"><option value="">Select</option>`;
+                opts.forEach(o => h += `<option value="${o}" ${o===selected?'selected':''}>${o}</option>`);
+                h += `</select>`;
+                return h;
+            };
+
+            if (state.isCreatingDash) {
+                const tr = document.createElement('tr');
+                tr.className = 'edit-mode';
+                tr.innerHTML = `
+                    <td>
+                        <button class="btn btn-success btn-sm" onclick="saveDashRow()"><i class="fas fa-check"></i></button>
+                        <button class="btn btn-secondary btn-sm" onclick="cancelDashRow()"><i class="fas fa-times"></i></button>
+                    </td>
+                    <td>${getFormattedDate().split(' ')[0]}</td>
+                    <td>${getFormattedDate().split(' ')[1]}</td>
+                    <td>${makeSelect('d-line', lines)}</td>
+                    <td>${makeSelect('d-prof', profiles)}</td>
+                    <td>${makeSelect('d-col', colors)}</td>
+                    <td>${makeSelect('d-len', lengths)}</td>
+                    <td><input type="number" class="form-input" id="d-m1" oninput="calcAvg()"></td>
+                    <td><input type="number" class="form-input" id="d-m2" oninput="calcAvg()"></td>
+                    <td><input type="number" class="form-input" id="d-m3" oninput="calcAvg()"></td>
+                    <td><span id="d-avg" style="font-weight:bold;">-</span></td>
+                    <td>Demo User</td>
+                `;
+                dashTableBody.appendChild(tr);
+            }
+
+            state.embossingData.forEach(row => {
+                const tr = document.createElement('tr');
+                const isEditing = state.editingDashId === row.id;
+                
+                // Validate
+                let cellClass = "";
+                if(row.snapMin && row.snapMax) {
+                    if(row.avg >= row.snapMin && row.avg <= row.snapMax) cellClass = "cell-pass"; else cellClass = "cell-fail";
+                }
+
+                if (isEditing) {
+                    tr.className = 'edit-mode';
+                    tr.innerHTML = `
+                        <td>
+                            <button class="btn btn-primary btn-sm" onclick="updateDashRow(${row.id})">Save</button>
+                            <button class="btn btn-secondary btn-sm" onclick="cancelEditDash()">X</button>
+                        </td>
+                        <td>${row.date}</td>
+                        <td>${row.time}</td>
+                        <td>${makeSelect('ed-line', lines, row.line)}</td>
+                        <td>${makeSelect('ed-prof', profiles, row.profile)}</td>
+                        <td>${makeSelect('ed-col', colors, row.color)}</td>
+                        <td>${makeSelect('ed-len', lengths, row.length)}</td>
+                        <td><input type="number" class="form-input" id="ed-m1" value="${row.m1}" oninput="calcEditAvg(${row.id})"></td>
+                        <td><input type="number" class="form-input" id="ed-m2" value="${row.m2}" oninput="calcEditAvg(${row.id})"></td>
+                        <td><input type="number" class="form-input" id="ed-m3" value="${row.m3}" oninput="calcEditAvg(${row.id})"></td>
+                        <td><span id="ed-avg-${row.id}">${row.avg}</span></td>
+                        <td>${row.createdBy}</td>
+                    `;
+                } else {
+                    tr.innerHTML = `
+                        <td>
+                             <button class="btn btn-icon-only" onclick="showHistory('dash', ${row.id})"><i class="fas fa-history"></i></button>
+                             <button class="btn btn-icon-only" onclick="startEditDash(${row.id})"><i class="fas fa-pencil-alt"></i></button>
+                             <button class="btn btn-icon-only" style="color:var(--danger-color)" onclick="deleteDashRow(${row.id})"><i class="fas fa-trash"></i></button>
+                        </td>
+                        <td>${row.date}</td>
+                        <td>${row.time}</td>
+                        <td>${row.line}</td>
+                        <td>${row.profile}</td>
+                        <td>${row.color}</td>
+                        <td>${row.length}</td>
+                        <td>${row.m1}</td>
+                        <td>${row.m2}</td>
+                        <td>${row.m3}</td>
+                        <td class="${cellClass}">${row.avg}</td>
+                        <td>${row.createdBy}</td>
+                    `;
+                }
+                dashTableBody.appendChild(tr);
+            });
+        }
+
+        function startAddDashboardRow() {
+            if(state.editingDashId) cancelEditDash();
+            state.isCreatingDash = true;
+            renderDashTable();
+        }
+        function cancelDashRow() {
+            state.isCreatingDash = false;
+            renderDashTable();
+        }
+        function startEditDash(id) {
+            state.isCreatingDash = false;
+            state.editingDashId = id;
+            renderDashTable();
+        }
+        function cancelEditDash() {
+            state.editingDashId = null;
+            renderDashTable();
+        }
+        function deleteDashRow(id) {
+            if(confirm("Delete?")) {
+                state.embossingData = state.embossingData.filter(d => d.id !== id);
+                renderDashTable();
+            }
+        }
+
+        function calcAvg() {
+            const m1 = parseFloat(document.getElementById('d-m1').value)||0;
+            const m2 = parseFloat(document.getElementById('d-m2').value)||0;
+            const m3 = parseFloat(document.getElementById('d-m3').value)||0;
+            const avg = ((m1+m2+m3)/3).toFixed(2);
+            document.getElementById('d-avg').innerText = avg;
+            // Live validation logic removed for brevity but relies on finding config
+        }
+        function calcEditAvg(id) {
+            const m1 = parseFloat(document.getElementById('ed-m1').value)||0;
+            const m2 = parseFloat(document.getElementById('ed-m2').value)||0;
+            const m3 = parseFloat(document.getElementById('ed-m3').value)||0;
+            const avg = ((m1+m2+m3)/3).toFixed(2);
+            document.getElementById(`ed-avg-${id}`).innerText = avg;
+        }
+
+        function saveDashRow() {
+            const line = document.getElementById('d-line').value;
+            const prof = document.getElementById('d-prof').value;
+            const col = document.getElementById('d-col').value;
+            const len = document.getElementById('d-len').value;
+            const m1 = parseFloat(document.getElementById('d-m1').value);
+            const m2 = parseFloat(document.getElementById('d-m2').value);
+            const m3 = parseFloat(document.getElementById('d-m3').value);
+            const avg = parseFloat(((m1+m2+m3)/3).toFixed(2));
+
+            if(!line||!prof||!col||!len) { alert("Fields required"); return; }
+
+            // Find Config snapshot
+            const config = state.labConfigs["Embossing"].find(c => c.profile === prof && c.color === col); // Simple match
+            let sMin=null, sMax=null;
+            if(config) { sMin = config.min; sMax = config.max; }
+
+            state.embossingData.unshift({
+                id: Date.now(), date: getFormattedDate().split(' ')[0], time: getFormattedDate().split(' ')[1],
+                line: line, profile: prof, color: col, length: len, m1, m2, m3, avg, createdBy: 'Demo', 
+                snapMin: sMin, snapMax: sMax
+            });
+            state.isCreatingDash = false;
+            renderDashTable();
+        }
+
+        function updateDashRow(id) {
+            const row = state.embossingData.find(r => r.id === id);
+            row.line = document.getElementById('ed-line').value;
+            row.profile = document.getElementById('ed-prof').value;
+            row.color = document.getElementById('ed-col').value;
+            row.length = document.getElementById('ed-len').value;
+            row.m1 = parseFloat(document.getElementById('ed-m1').value);
+            row.m2 = parseFloat(document.getElementById('ed-m2').value);
+            row.m3 = parseFloat(document.getElementById('ed-m3').value);
+            row.avg = parseFloat(((row.m1+row.m2+row.m3)/3).toFixed(2));
+
+            // Re-snap config
+            const config = state.labConfigs["Embossing"].find(c => c.profile === row.profile && c.color === row.color); 
+            if(config) { row.snapMin = config.min; row.snapMax = config.max; }
+
+            state.editingDashId = null;
+            renderDashTable();
+        }
+
+        // --- Utils ---
+        function updatePermissions() {
+            state.permissions.new = document.getElementById('perm-new').checked;
+            state.permissions.edit = document.getElementById('perm-edit').checked;
+            state.permissions.delete = document.getElementById('perm-delete').checked;
+            
+            state.configPermissions.new = document.getElementById('perm-config-new').checked;
+            state.configPermissions.edit = document.getElementById('perm-config-edit').checked;
+            state.configPermissions.delete = document.getElementById('perm-config-delete').checked;
+
+            document.getElementById('add-master-btn').style.display = state.permissions.new ? 'inline-flex' : 'none';
+            document.getElementById('add-config-btn').style.display = state.configPermissions.new ? 'inline-flex' : 'none';
+            
+            renderMasterTable(); renderConfigTable();
+        }
+
+        // Run
+        init();
+    </script>
+</body>
+</html>
