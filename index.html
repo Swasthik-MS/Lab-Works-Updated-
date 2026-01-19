@@ -159,6 +159,7 @@
 
         .form-input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
         .form-input:disabled { background-color: #f0f0f0; color: #666; cursor: not-allowed; }
+        .form-input.readonly { background-color: #f9f9f9; color: #555; cursor: default; }
         .error-msg { color: var(--danger-color); font-size: 12px; margin-top: 4px; display: none; }
         .search-input { width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px; font-size: 11px; margin-top: 5px; }
 
@@ -221,6 +222,8 @@
         .toast.show { opacity: 1; transform: translateY(0); }
         .toast.success { background-color: var(--success-color); }
         .toast.error { background-color: var(--danger-color); }
+        
+        .req-star { color: red; margin-left: 2px; }
     </style>
 </head>
 <body>
@@ -419,25 +422,25 @@
                                 <th width="5%">Sl. No.
                                     <input type="text" class="search-input" onkeyup="filterMasterTable(1, this.value)" placeholder="Search">
                                 </th>
-                                <th width="12%">Product Line
+                                <th width="12%">Product Line <span class="req-star">*</span>
                                     <input type="text" class="search-input" onkeyup="filterMasterTable(2, this.value)" placeholder="Search">
                                 </th>
-                                <th width="12%">Profile Type
+                                <th width="12%">Profile Type <span class="req-star">*</span>
                                     <input type="text" class="search-input" onkeyup="filterMasterTable(3, this.value)" placeholder="Search">
                                 </th>
-                                <th width="12%">Profile
+                                <th width="12%">Profile <span class="req-star">*</span>
                                     <input type="text" class="search-input" onkeyup="filterMasterTable(4, this.value)" placeholder="Search">
                                 </th>
-                                <th width="12%">Color
+                                <th width="12%">Color <span class="req-star">*</span>
                                     <input type="text" class="search-input" onkeyup="filterMasterTable(5, this.value)" placeholder="Search">
                                 </th>
-                                <th width="10%">Length (ft.)
+                                <th width="10%">Length (ft.) <span class="req-star">*</span>
                                     <input type="text" class="search-input" onkeyup="filterMasterTable(6, this.value)" placeholder="Search">
                                 </th>
-                                <th width="12%">Bundle SKU
+                                <th width="12%">Bundle SKU <span class="req-star">*</span>
                                     <input type="text" class="search-input" onkeyup="filterMasterTable(7, this.value)" placeholder="Search">
                                 </th>
-                                <th width="15%">Description
+                                <th width="15%">Description <span class="req-star">*</span>
                                     <input type="text" class="search-input" onkeyup="filterMasterTable(8, this.value)" placeholder="Search">
                                 </th>
                                 <th width="5%">Status</th>
@@ -671,15 +674,12 @@
             reader.onload = function(e) {
                 const text = e.target.result;
                 const rows = text.split("\n");
-                // Remove empty rows
                 const validRows = rows.filter(r => r.trim() !== "");
                 
-                // Validate Header
                 const expectedHeaders = ["Product Line", "Profile Type", "Profile", "Color", "Length (ft.)", "Bundle SKU", "Description"];
                 const headerRow = validRows[0].split(",");
                 const cleanHeaders = headerRow.map(h => h.replace(/"/g, "").trim());
                 
-                // Simple validation check: ensure at least first few match
                 if(cleanHeaders[0] !== expectedHeaders[0] || cleanHeaders[3] !== expectedHeaders[3]) {
                     alert("Invalid template format. Please download the template and try again.");
                     return;
@@ -689,7 +689,7 @@
                 let skipCount = 0;
 
                 for(let i=1; i<validRows.length; i++) {
-                    const cols = validRows[i].split(","); // Simple split - assumes no commas in data for prototype
+                    const cols = validRows[i].split(",");
                     if(cols.length < 7) continue;
 
                     const pl = cols[0].replace(/"/g, "").trim();
@@ -700,7 +700,6 @@
                     const sku = cols[5].replace(/"/g, "").trim();
                     const desc = cols[6].replace(/"/g, "").trim();
 
-                    // Duplicate Check
                     const exists = state.masterList.some(r => 
                         r.prodLine.toLowerCase() === pl.toLowerCase() &&
                         r.type.toLowerCase() === pt.toLowerCase() &&
@@ -726,7 +725,7 @@
                 
                 renderMasterTable();
                 showToast(`Import Complete. Added: ${addedCount}, Skipped/Duplicate: ${skipCount}`, 'success');
-                event.target.value = ''; // Reset input
+                event.target.value = '';
             };
             reader.readAsText(file);
         }
@@ -734,35 +733,24 @@
         function filterMasterTable(colIndex, searchText) {
             const table = document.getElementById("master-table-body");
             const trs = table.getElementsByTagName("tr");
-            const filter = searchText.toLowerCase();
-
-            // We need to keep track of rows that are visible based on ALL active filters
-            // For this simple implementation, we will re-evaluate visibility for all rows
-            // by checking ALL filter inputs every time any input changes.
-            
             const headers = document.querySelectorAll("#view-master-list th input.search-input");
             const filters = [];
-            headers.forEach((input, index) => {
-               // Column indexes in th inputs map to: SlNo=1, ProdLine=2... etc (Action is 0)
-               // The inputs are inside THs. Let's get the parent TH index.
+            headers.forEach((input) => {
                const th = input.parentElement;
-               // Get index of th among all ths in that row
                const thIndex = Array.from(th.parentNode.children).indexOf(th);
                filters[thIndex] = input.value.toLowerCase();
             });
 
             for (let i = 0; i < trs.length; i++) {
                 const tr = trs[i];
-                if (tr.classList.contains('edit-mode')) continue; // Don't filter edit row
+                if (tr.classList.contains('edit-mode')) continue; 
 
                 let showRow = true;
                 const tds = tr.getElementsByTagName("td");
 
-                // Check each active filter
                 for (let colIdx in filters) {
                     const searchVal = filters[colIdx];
                     if (searchVal) {
-                        // tds index matches th index
                         const td = tds[colIdx];
                         if (td) {
                             const txtValue = td.textContent || td.innerText;
@@ -794,12 +782,9 @@ Embossing (Winchester > Decking > Building 6 )`;
 
         // --- STATE ---
         const state = {
-            // Permissions
             permissions: { new: true, edit: true, delete: true },
             configPermissions: { new: true, edit: true, delete: true },
-
-            // Master List with Pre-loaded Data
-            nextMasterSlNo: 100, // starting point for next inserts
+            nextMasterSlNo: 100,
             masterList: [
                 { id: 1, slNo: 1, prodLine: "Enhance 2.0", type: "1 x 6", profile: "Grooved", color: "Beach Dune", length: "12", sku: "BD010612E2G56", desc: '1" x 6" x 12\' EnhanceG2 GV - BD', status: true, history: [] },
                 { id: 2, slNo: 2, prodLine: "Enhance 2.0", type: "1 x 6", profile: "Square", color: "Beach Dune", length: "12", sku: "BD010612E2S56", desc: '1" x 6" x 12\' EnhanceG2 SQ - BD', status: true, history: [] },
@@ -811,7 +796,6 @@ Embossing (Winchester > Decking > Building 6 )`;
                 { id: 8, slNo: 8, prodLine: "Enhance 2.0", type: "1 x 6", profile: "Square", color: "Calm Water", length: "12", sku: "CW010612E2S56", desc: '1" x 6" x 12\' EnhanceG2 SQ - CW', status: true, history: [] },
                 { id: 9, slNo: 9, prodLine: "Enhance 2.0", type: "1 x 6", profile: "Grooved", color: "Calm Water", length: "16", sku: "CW010616E2G56", desc: '1" x 6" x 16\' EnhanceG2 GV - CW', status: true, history: [] },
                 { id: 10, slNo: 10, prodLine: "Enhance 2.0", type: "1 x 6", profile: "Square", color: "Calm Water", length: "16", sku: "CW010616E2S56", desc: '1" x 6" x 16\' EnhanceG2 SQ - CW', status: true, history: [] },
-                // ... (Truncated for brevity in code, but conceptually all 100+ records would be here)
                 { id: 99, slNo: 99, prodLine: "Select", type: "1 x 6", profile: "Grooved", color: "Saddle", length: "12", sku: "SD010612SG64", desc: '1" x 6" x 12\' Select GV - SD', status: true, history: [] }
             ],
             
@@ -829,6 +813,9 @@ Embossing (Winchester > Decking > Building 6 )`;
             // Config Edit States
             selectedLab: "",
             editingConfigId: null, isCreatingConfig: false,
+            
+            // Temporary selections for cascading dropdowns in Add Config
+            newConfigSelection: { pl: "", pt: "", p: "", c: "", l: "" },
 
             // Dashboard Edit States
             editingDashId: null, isCreatingDash: false
@@ -895,28 +882,6 @@ Embossing (Winchester > Decking > Building 6 )`;
         function renderMasterTable() {
             masterTableBody.innerHTML = '';
             
-            // New Row
-            if (state.isCreatingMaster) {
-                const tr = document.createElement('tr');
-                tr.className = 'edit-mode';
-                tr.innerHTML = `
-                    <td>
-                        <button class="btn btn-success btn-sm" onclick="saveNewMaster()"><i class="fas fa-check"></i></button>
-                        <button class="btn btn-secondary btn-sm" onclick="cancelMaster()"><i class="fas fa-times"></i></button>
-                    </td>
-                    <td>${state.nextMasterSlNo}</td>
-                    <td><input class="form-input" id="new-m-pl"></td>
-                    <td><input class="form-input" id="new-m-pt"></td>
-                    <td><input class="form-input" id="new-m-p"></td>
-                    <td><input class="form-input" id="new-m-c"></td>
-                    <td><input class="form-input" id="new-m-l"></td>
-                    <td><input class="form-input" id="new-m-sku"></td>
-                    <td><input class="form-input" id="new-m-desc"></td>
-                    <td><span class="status-badge status-active">Active</span></td>
-                `;
-                masterTableBody.appendChild(tr);
-            }
-
             state.masterList.forEach(row => {
                 const isEditing = state.editingMasterId === row.id;
                 const tr = document.createElement('tr');
@@ -959,6 +924,30 @@ Embossing (Winchester > Decking > Building 6 )`;
                 }
                 masterTableBody.appendChild(tr);
             });
+
+            // New Row AT BOTTOM
+            if (state.isCreatingMaster) {
+                const tr = document.createElement('tr');
+                tr.className = 'edit-mode';
+                tr.innerHTML = `
+                    <td>
+                        <button class="btn btn-success btn-sm" onclick="saveNewMaster()"><i class="fas fa-check"></i></button>
+                        <button class="btn btn-secondary btn-sm" onclick="cancelMaster()"><i class="fas fa-times"></i></button>
+                    </td>
+                    <td>${state.nextMasterSlNo}</td>
+                    <td><input class="form-input" id="new-m-pl" placeholder="Required"></td>
+                    <td><input class="form-input" id="new-m-pt" placeholder="Required"></td>
+                    <td><input class="form-input" id="new-m-p" placeholder="Required"></td>
+                    <td><input class="form-input" id="new-m-c" placeholder="Required"></td>
+                    <td><input class="form-input" id="new-m-l" placeholder="Required"></td>
+                    <td><input class="form-input" id="new-m-sku" placeholder="Required"></td>
+                    <td><input class="form-input" id="new-m-desc" placeholder="Required"></td>
+                    <td><span class="status-badge status-active">Active</span></td>
+                `;
+                masterTableBody.appendChild(tr);
+                // Scroll to bottom
+                setTimeout(() => mainScrollArea.scrollTop = mainScrollArea.scrollHeight, 100);
+            }
         }
 
         function startAddNewMaster() {
@@ -987,7 +976,7 @@ Embossing (Winchester > Decking > Building 6 )`;
             const desc = document.getElementById('new-m-desc').value.trim();
 
             if (!pl || !pt || !p || !c || !l || !sku || !desc) {
-                alert("All fields are mandatory."); return;
+                alert("All fields are mandatory. Please fill in all fields marked with *."); return;
             }
 
             // Duplicate Check
@@ -1001,7 +990,7 @@ Embossing (Winchester > Decking > Building 6 )`;
             );
 
             if (exists) {
-                alert("Duplicate record exists."); return;
+                alert("Duplicate record exists! This combination already exists in the Master List."); return;
             }
 
             state.masterList.push({
@@ -1040,6 +1029,8 @@ Embossing (Winchester > Decking > Building 6 )`;
             const configSec = document.getElementById('lab-config-section');
 
             state.editingConfigId = null; state.isCreatingConfig = false;
+            // Reset cascading dropdown states
+            state.newConfigSelection = { pl: "", pt: "", p: "", c: "", l: "" };
 
             if (val === "Embossing") {
                 locArea.value = EMBOSSING_LOCATIONS;
@@ -1057,25 +1048,90 @@ Embossing (Winchester > Decking > Building 6 )`;
             }
         }
 
+        // Helper to get Unique Values for Dropdowns based on filters
+        function getFilteredOptions(field, currentFilters) {
+            // Only Active Records
+            let filtered = state.masterList.filter(m => m.status);
+            
+            // Apply current filters
+            if (currentFilters.pl) filtered = filtered.filter(m => m.prodLine === currentFilters.pl);
+            if (currentFilters.pt) filtered = filtered.filter(m => m.type === currentFilters.pt);
+            if (currentFilters.p) filtered = filtered.filter(m => m.profile === currentFilters.p);
+            if (currentFilters.c) filtered = filtered.filter(m => m.color === currentFilters.c);
+            
+            // Get unique values for the requested field
+            const uniqueVals = [...new Set(filtered.map(m => m[field]))].sort();
+            
+            let opts = `<option value="">Select</option>`;
+            uniqueVals.forEach(v => {
+                opts += `<option value="${v}" ${v === currentFilters[fieldShortToLong(field)] ? 'selected' : ''}>${v}</option>`;
+            });
+            return opts;
+        }
+
+        function fieldShortToLong(f) {
+            if(f==='prodLine') return 'pl'; // Not used in filtering logic directly but conceptual mapping
+            return '';
+        }
+
+        function handleConfigDropdownChange(field, value) {
+            // Update state
+            if(field === 'pl') {
+                state.newConfigSelection.pl = value;
+                // Reset subsequent fields
+                state.newConfigSelection.pt = ""; state.newConfigSelection.p = ""; 
+                state.newConfigSelection.c = ""; state.newConfigSelection.l = "";
+            } else if(field === 'pt') {
+                state.newConfigSelection.pt = value;
+                state.newConfigSelection.p = ""; state.newConfigSelection.c = ""; state.newConfigSelection.l = "";
+            } else if(field === 'p') {
+                state.newConfigSelection.p = value;
+                state.newConfigSelection.c = ""; state.newConfigSelection.l = "";
+            } else if(field === 'c') {
+                state.newConfigSelection.c = value;
+                state.newConfigSelection.l = "";
+            } else if(field === 'l') {
+                state.newConfigSelection.l = value;
+                // Trigger auto-fill if all selected
+                autoFillSKUAndDesc();
+            }
+            renderConfigTable();
+        }
+
+        function autoFillSKUAndDesc() {
+            const { pl, pt, p, c, l } = state.newConfigSelection;
+            if(pl && pt && p && c && l) {
+                const match = state.masterList.find(m => 
+                    m.status && m.prodLine === pl && m.type === pt && m.profile === p && m.color === c && m.length === l
+                );
+                if(match) {
+                    // We can't update DOM directly as renderConfigTable will overwrite. 
+                    // But we can store these temp values or just let render handle it if we stored it in state.
+                    // For prototype simplicity, we'll assume renderConfigTable uses these values if available or logic
+                    // Actually, let's update input values after render if row exists, or pass to render.
+                    // Better: The input fields in the add row should grab values.
+                }
+            }
+        }
+
         function renderConfigTable() {
             configTableBody.innerHTML = '';
             const data = state.labConfigs[state.selectedLab] || [];
             
-            // Generate dropdown options from ACTIVE Master List records
-            const activeMasters = state.masterList.filter(m => m.status);
-            
-            // Helper to create dropdowns
-            const getOptions = (field, selectedVal) => {
-                const uniqueVals = [...new Set(activeMasters.map(m => m[field]))];
-                let opts = `<option value="">Select</option>`;
-                uniqueVals.forEach(v => {
-                    opts += `<option value="${v}" ${v === selectedVal ? 'selected' : ''}>${v}</option>`;
-                });
-                return opts;
-            };
-
-            // New Row
+            // New Row Logic
             if (state.isCreatingConfig) {
+                const s = state.newConfigSelection;
+                
+                // Determine auto-filled values
+                let autoSku = "";
+                let autoDesc = "";
+                if (s.pl && s.pt && s.p && s.c && s.l) {
+                    const match = state.masterList.find(m => 
+                        m.status && m.prodLine === s.pl && m.type === s.pt && m.profile === s.p && m.color === s.c && m.length === s.l
+                    );
+                    if(match) { autoSku = match.sku; autoDesc = match.desc; }
+                }
+
                 const tr = document.createElement('tr');
                 tr.className = 'edit-mode';
                 tr.innerHTML = `
@@ -1083,18 +1139,27 @@ Embossing (Winchester > Decking > Building 6 )`;
                         <button class="btn btn-success btn-sm" onclick="saveNewConfig()"><i class="fas fa-check"></i></button>
                         <button class="btn btn-secondary btn-sm" onclick="cancelConfig()"><i class="fas fa-times"></i></button>
                     </td>
-                    <td><select class="form-input" id="new-cfg-pl">${getOptions('prodLine')}</select></td>
-                    <td><select class="form-input" id="new-cfg-pt">${getOptions('type')}</select></td>
-                    <td><select class="form-input" id="new-cfg-p">${getOptions('profile')}</select></td>
-                    <td><select class="form-input" id="new-cfg-c">${getOptions('color')}</select></td>
-                    <td><select class="form-input" id="new-cfg-l">${getOptions('length')}</select></td>
-                    <td><select class="form-input" id="new-cfg-sku">${getOptions('sku')}</select></td>
-                    <td><select class="form-input" id="new-cfg-desc">${getOptions('desc')}</select></td>
+                    <td><select class="form-input" onchange="handleConfigDropdownChange('pl', this.value)">${getFilteredOptions('prodLine', {})} </select></td>
+                    <td><select class="form-input" onchange="handleConfigDropdownChange('pt', this.value)">${getFilteredOptions('type', {pl:s.pl})}</select></td>
+                    <td><select class="form-input" onchange="handleConfigDropdownChange('p', this.value)">${getFilteredOptions('profile', {pl:s.pl, pt:s.pt})}</select></td>
+                    <td><select class="form-input" onchange="handleConfigDropdownChange('c', this.value)">${getFilteredOptions('color', {pl:s.pl, pt:s.pt, p:s.p})}</select></td>
+                    <td><select class="form-input" onchange="handleConfigDropdownChange('l', this.value)">${getFilteredOptions('length', {pl:s.pl, pt:s.pt, p:s.p, c:s.c})}</select></td>
+                    <td><input class="form-input readonly" id="new-cfg-sku" value="${autoSku}" readonly></td>
+                    <td><input class="form-input readonly" id="new-cfg-desc" value="${autoDesc}" readonly></td>
                     <td><input type="number" class="form-input" id="new-cfg-min" placeholder="Min" style="width:50px"></td>
                     <td><input type="number" class="form-input" id="new-cfg-max" placeholder="Max" style="width:50px"></td>
                     <td><span class="status-badge status-active">Active</span></td>
                     <td style="text-align:center;"><i class="fas fa-history" style="color:#ccc;"></i></td>
                 `;
+                // Set selections back to dropdowns after innerHTML reflow
+                setTimeout(() => {
+                    const selPL = tr.querySelector('td:nth-child(2) select'); if(selPL) selPL.value = s.pl;
+                    const selPT = tr.querySelector('td:nth-child(3) select'); if(selPT) selPT.value = s.pt;
+                    const selP = tr.querySelector('td:nth-child(4) select'); if(selP) selP.value = s.p;
+                    const selC = tr.querySelector('td:nth-child(5) select'); if(selC) selC.value = s.c;
+                    const selL = tr.querySelector('td:nth-child(6) select'); if(selL) selL.value = s.l;
+                }, 0);
+                
                 configTableBody.appendChild(tr);
             }
 
@@ -1104,18 +1169,19 @@ Embossing (Winchester > Decking > Building 6 )`;
                 if(isEditing) tr.className = 'edit-mode';
                 
                 if(isEditing) {
+                    // Edit Mode: Fields disabled except Min/Max/Status
                     tr.innerHTML = `
                         <td>
                             <button class="btn btn-primary btn-sm" onclick="saveConfig(${item.id})">Save</button>
                             <button class="btn btn-secondary btn-sm" onclick="cancelConfig()">X</button>
                         </td>
-                        <td><select class="form-input" id="cfg-pl-${item.id}">${getOptions('prodLine', item.prodLine)}</select></td>
-                        <td><select class="form-input" id="cfg-pt-${item.id}">${getOptions('type', item.type)}</select></td>
-                        <td><select class="form-input" id="cfg-p-${item.id}">${getOptions('profile', item.profile)}</select></td>
-                        <td><select class="form-input" id="cfg-c-${item.id}">${getOptions('color', item.color)}</select></td>
-                        <td><select class="form-input" id="cfg-l-${item.id}">${getOptions('length', item.length)}</select></td>
-                        <td><select class="form-input" id="cfg-sku-${item.id}">${getOptions('sku', item.sku)}</select></td>
-                        <td><select class="form-input" id="cfg-desc-${item.id}">${getOptions('desc', item.desc)}</select></td>
+                        <td><input class="form-input readonly" value="${item.prodLine}" disabled></td>
+                        <td><input class="form-input readonly" value="${item.type}" disabled></td>
+                        <td><input class="form-input readonly" value="${item.profile}" disabled></td>
+                        <td><input class="form-input readonly" value="${item.color}" disabled></td>
+                        <td><input class="form-input readonly" value="${item.length}" disabled></td>
+                        <td><input class="form-input readonly" value="${item.sku}" disabled></td>
+                        <td><input class="form-input readonly" value="${item.desc}" disabled></td>
                         <td><input type="number" class="form-input" id="cfg-min-${item.id}" value="${item.min}" style="width:50px"></td>
                         <td><input type="number" class="form-input" id="cfg-max-${item.id}" value="${item.max}" style="width:50px"></td>
                         <td>
@@ -1151,6 +1217,7 @@ Embossing (Winchester > Decking > Building 6 )`;
         function startAddNewConfig() {
             if(state.editingConfigId) cancelConfig();
             state.isCreatingConfig = true;
+            state.newConfigSelection = { pl: "", pt: "", p: "", c: "", l: "" }; // Reset
             renderConfigTable();
         }
         function startEditConfig(id) {
@@ -1164,22 +1231,23 @@ Embossing (Winchester > Decking > Building 6 )`;
             renderConfigTable();
         }
         function saveNewConfig() {
-            const pl = document.getElementById('new-cfg-pl').value;
-            const pt = document.getElementById('new-cfg-pt').value;
-            const p = document.getElementById('new-cfg-p').value;
-            const c = document.getElementById('new-cfg-c').value;
-            const l = document.getElementById('new-cfg-l').value;
-            const sku = document.getElementById('new-cfg-sku').value;
-            const desc = document.getElementById('new-cfg-desc').value;
+            const s = state.newConfigSelection;
             const min = document.getElementById('new-cfg-min').value;
             const max = document.getElementById('new-cfg-max').value;
+            
+            // Re-validate match for SKU/Desc
+            const match = state.masterList.find(m => 
+                m.status && m.prodLine === s.pl && m.type === s.pt && m.profile === s.p && m.color === s.c && m.length === s.l
+            );
 
-            if(!pl || !pt || !p || !c || !l || !sku || !desc) { 
-                alert("All dropdown fields required"); return; 
+            if(!match) { 
+                alert("Please select a complete valid combination from the dropdowns."); return; 
             }
 
             const newRec = {
-                id: Date.now(), prodLine: pl, type: pt, profile: p, color: c, length: l, sku: sku, desc: desc,
+                id: Date.now(), 
+                prodLine: match.prodLine, type: match.type, profile: match.profile, color: match.color, length: match.length, 
+                sku: match.sku, desc: match.desc,
                 min: min, max: max, status: true,
                 history: [{ date: getFormattedDate(), action: 'Created', user: 'Demo', details: 'Status: Active' }]
             };
@@ -1191,17 +1259,14 @@ Embossing (Winchester > Decking > Building 6 )`;
         
         function saveConfig(id) {
             const rec = state.labConfigs[state.selectedLab].find(i=>i.id===id);
-            rec.prodLine = document.getElementById(`cfg-pl-${id}`).value;
-            rec.type = document.getElementById(`cfg-pt-${id}`).value;
-            rec.profile = document.getElementById(`cfg-p-${id}`).value;
-            rec.color = document.getElementById(`cfg-c-${id}`).value;
-            rec.length = document.getElementById(`cfg-l-${id}`).value;
-            rec.sku = document.getElementById(`cfg-sku-${id}`).value;
-            rec.desc = document.getElementById(`cfg-desc-${id}`).value;
-            rec.min = document.getElementById(`cfg-min-${id}`).value;
-            rec.max = document.getElementById(`cfg-max-${id}`).value;
-            rec.status = document.getElementById(`cfg-status-${id}`).checked;
+            const min = document.getElementById(`cfg-min-${id}`).value;
+            const max = document.getElementById(`cfg-max-${id}`).value;
+            const statusBox = document.getElementById(`cfg-status-${id}`);
+            
+            let newStatus = rec.status;
+            if(state.configPermissions.delete && statusBox) newStatus = statusBox.checked;
 
+            rec.min = min; rec.max = max; rec.status = newStatus;
             rec.history.unshift({ date: getFormattedDate(), action: 'Updated', user: 'Demo', details: 'Record Updated' });
             
             state.editingConfigId = null;
