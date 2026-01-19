@@ -375,6 +375,8 @@
                                 <th>Date</th>
                                 <th>Time</th>
                                 <th>Line</th>
+                                <th>Product Line</th>
+                                <th>Profile Type</th>
                                 <th>Profile</th>
                                 <th>Color</th>
                                 <th>Length</th>
@@ -1286,6 +1288,8 @@ Embossing (Winchester > Decking > Building 6 )`;
             
             // Unique Lists from Configs for Dropdowns
             const getUnique = (field) => [...new Set(configs.map(c => c[field]))];
+            const productLines = getUnique('prodLine');
+            const profileTypes = getUnique('type');
             const profiles = getUnique('profile');
             const colors = getUnique('color');
             const lines = ['Line A', 'Line B']; // Hardcoded for prototype
@@ -1309,6 +1313,8 @@ Embossing (Winchester > Decking > Building 6 )`;
                     <td>${getFormattedDate().split(' ')[0]}</td>
                     <td>${getFormattedDate().split(' ')[1]}</td>
                     <td>${makeSelect('d-line', lines)}</td>
+                    <td>${makeSelect('d-prodLine', productLines)}</td>
+                    <td>${makeSelect('d-profType', profileTypes)}</td>
                     <td>${makeSelect('d-prof', profiles)}</td>
                     <td>${makeSelect('d-col', colors)}</td>
                     <td>${makeSelect('d-len', lengths)}</td>
@@ -1341,6 +1347,8 @@ Embossing (Winchester > Decking > Building 6 )`;
                         <td>${row.date}</td>
                         <td>${row.time}</td>
                         <td>${makeSelect('ed-line', lines, row.line)}</td>
+                        <td>${makeSelect('ed-prodLine', productLines, row.prodLine)}</td>
+                        <td>${makeSelect('ed-profType', profileTypes, row.profileType)}</td>
                         <td>${makeSelect('ed-prof', profiles, row.profile)}</td>
                         <td>${makeSelect('ed-col', colors, row.color)}</td>
                         <td>${makeSelect('ed-len', lengths, row.length)}</td>
@@ -1360,6 +1368,8 @@ Embossing (Winchester > Decking > Building 6 )`;
                         <td>${row.date}</td>
                         <td>${row.time}</td>
                         <td>${row.line}</td>
+                        <td>${row.prodLine}</td>
+                        <td>${row.profileType}</td>
                         <td>${row.profile}</td>
                         <td>${row.color}</td>
                         <td>${row.length}</td>
@@ -1417,6 +1427,8 @@ Embossing (Winchester > Decking > Building 6 )`;
 
         function saveDashRow() {
             const line = document.getElementById('d-line').value;
+            const prodLine = document.getElementById('d-prodLine').value;
+            const profType = document.getElementById('d-profType').value;
             const prof = document.getElementById('d-prof').value;
             const col = document.getElementById('d-col').value;
             const len = document.getElementById('d-len').value;
@@ -1425,7 +1437,7 @@ Embossing (Winchester > Decking > Building 6 )`;
             const m3 = parseFloat(document.getElementById('d-m3').value);
             const avg = parseFloat(((m1+m2+m3)/3).toFixed(2));
 
-            if(!line||!prof||!col||!len) { alert("Fields required"); return; }
+            if(!line||!prodLine||!profType||!prof||!col||!len) { alert("Fields required"); return; }
 
             // Find Config snapshot
             const config = state.labConfigs["Embossing"].find(c => c.profile === prof && c.color === col); // Simple match
@@ -1434,7 +1446,7 @@ Embossing (Winchester > Decking > Building 6 )`;
 
             state.embossingData.unshift({
                 id: Date.now(), date: getFormattedDate().split(' ')[0], time: getFormattedDate().split(' ')[1],
-                line: line, profile: prof, color: col, length: len, m1, m2, m3, avg, createdBy: 'Demo', 
+                line: line, prodLine: prodLine, profileType: profType, profile: prof, color: col, length: len, m1, m2, m3, avg, createdBy: 'Demo', 
                 snapMin: sMin, snapMax: sMax
             });
             state.isCreatingDash = false;
@@ -1444,6 +1456,8 @@ Embossing (Winchester > Decking > Building 6 )`;
         function updateDashRow(id) {
             const row = state.embossingData.find(r => r.id === id);
             row.line = document.getElementById('ed-line').value;
+            row.prodLine = document.getElementById('ed-prodLine').value;
+            row.profileType = document.getElementById('ed-profType').value;
             row.profile = document.getElementById('ed-prof').value;
             row.color = document.getElementById('ed-col').value;
             row.length = document.getElementById('ed-len').value;
