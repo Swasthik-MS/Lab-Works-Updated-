@@ -804,11 +804,19 @@ Embossing (Winchester > Decking > Building 6 )`;
             
             // Lab Configurations { labName: [records] }
             labConfigs: {
-                "Embossing": [] // Empty initially
+                "Embossing": [
+                     { id: 1001, slNo: 1, prodLine: "Enhance 2.0", type: "1 x 6", profile: "Grooved", color: "Beach Dune", length: "12", sku: "BD010612E2G56", desc: '1" x 6" x 12\' EnhanceG2 GV - BD', min: 10, max: 20, status: true, history: [] },
+                     { id: 1002, slNo: 2, prodLine: "Enhance 2.0", type: "1 x 6", profile: "Square", color: "Beach Dune", length: "12", sku: "BD010612E2S56", desc: '1" x 6" x 12\' EnhanceG2 SQ - BD', min: 12, max: 22, status: true, history: [] },
+                     { id: 1003, slNo: 3, prodLine: "Enhance 2.0", type: "1 x 6", profile: "Grooved", color: "Calm Water", length: "16", sku: "CW010616E2G56", desc: '1" x 6" x 16\' EnhanceG2 GV - CW', min: 15, max: 25, status: true, history: [] }
+                ]
             },
             
             // Dashboard Data
-            embossingData: [],
+            embossingData: [
+                 { id: 501, date: '2025-12-16', time: '10:00', line: 'Line A', prodLine: "Enhance 2.0", profileType: "1 x 6", profile: "Grooved", color: "Beach Dune", length: "12", m1: 15, m2: 15, m3: 15, avg: 15, createdBy: 'John Doe', snapMin: 10, snapMax: 20 },
+                 { id: 502, date: '2025-12-16', time: '11:00', line: 'Line B', prodLine: "Enhance 2.0", profileType: "1 x 6", profile: "Square", color: "Beach Dune", length: "12", m1: 18, m2: 18, m3: 18, avg: 18, createdBy: 'Jane Doe', snapMin: 12, snapMax: 22 },
+                 { id: 503, date: '2025-12-16', time: '12:00', line: 'Line A', prodLine: "Enhance 2.0", profileType: "1 x 6", profile: "Grooved", color: "Calm Water", length: "16", m1: 20, m2: 20, m3: 20, avg: 20, createdBy: 'John Doe', snapMin: 15, snapMax: 25 }
+            ],
 
             // Edit States - Master List
             editingMasterId: null, isCreatingMaster: false,
@@ -821,7 +829,9 @@ Embossing (Winchester > Decking > Building 6 )`;
             newConfigSelection: { pl: "", pt: "", p: "", c: "", l: "" },
 
             // Dashboard Edit States
-            editingDashId: null, isCreatingDash: false
+            editingDashId: null, isCreatingDash: false,
+            newDashSelection: { pl: "", pt: "", p: "", c: "", l: "" }, // For dashboard create
+            editDashSelection: { pl: "", pt: "", p: "", c: "", l: "" }  // For dashboard edit
         };
 
         // Init History
@@ -948,7 +958,6 @@ Embossing (Winchester > Decking > Building 6 )`;
                     <td><span class="status-badge status-active">Active</span></td>
                 `;
                 masterTableBody.appendChild(tr);
-                // Scroll to bottom
                 setTimeout(() => mainScrollArea.scrollTop = mainScrollArea.scrollHeight, 100);
             }
         }
@@ -982,7 +991,6 @@ Embossing (Winchester > Decking > Building 6 )`;
                 alert("All fields are mandatory. Please fill in all fields marked with *."); return;
             }
 
-            // Duplicate Check
             const exists = state.masterList.some(r => 
                 r.prodLine.toLowerCase() === pl.toLowerCase() &&
                 r.type.toLowerCase() === pt.toLowerCase() &&
@@ -1032,7 +1040,6 @@ Embossing (Winchester > Decking > Building 6 )`;
             const configSec = document.getElementById('lab-config-section');
 
             state.editingConfigId = null; state.isCreatingConfig = false;
-            // Reset cascading dropdown states
             state.newConfigSelection = { pl: "", pt: "", p: "", c: "", l: "" };
 
             if (val === "Embossing") {
@@ -1051,18 +1058,14 @@ Embossing (Winchester > Decking > Building 6 )`;
             }
         }
 
-        // Helper to get Unique Values for Dropdowns based on filters
         function getFilteredOptions(field, currentFilters) {
-            // Only Active Records
             let filtered = state.masterList.filter(m => m.status);
             
-            // Apply current filters for dependency logic
             if (currentFilters.pl) filtered = filtered.filter(m => m.prodLine === currentFilters.pl);
             if (currentFilters.pt) filtered = filtered.filter(m => m.type === currentFilters.pt);
             if (currentFilters.p) filtered = filtered.filter(m => m.profile === currentFilters.p);
             if (currentFilters.c) filtered = filtered.filter(m => m.color === currentFilters.c);
             
-            // Get unique values for the requested field
             const uniqueVals = [...new Set(filtered.map(m => m[field]))].sort();
             
             let opts = `<option value="">Select</option>`;
@@ -1073,15 +1076,13 @@ Embossing (Winchester > Decking > Building 6 )`;
         }
 
         function fieldShortToLong(f) {
-            if(f==='prodLine') return 'pl'; // Not used in filtering logic directly but conceptual mapping
+            if(f==='prodLine') return 'pl';
             return '';
         }
 
         function handleConfigDropdownChange(field, value) {
-            // Update state
             if(field === 'pl') {
                 state.newConfigSelection.pl = value;
-                // Reset subsequent fields
                 state.newConfigSelection.pt = ""; state.newConfigSelection.p = ""; 
                 state.newConfigSelection.c = ""; state.newConfigSelection.l = "";
             } else if(field === 'pt') {
@@ -1095,7 +1096,6 @@ Embossing (Winchester > Decking > Building 6 )`;
                 state.newConfigSelection.l = "";
             } else if(field === 'l') {
                 state.newConfigSelection.l = value;
-                // Trigger auto-fill logic will happen in renderConfigTable via state update
             }
             renderConfigTable();
         }
@@ -1104,11 +1104,8 @@ Embossing (Winchester > Decking > Building 6 )`;
             configTableBody.innerHTML = '';
             const data = state.labConfigs[state.selectedLab] || [];
             
-            // New Row Logic
             if (state.isCreatingConfig) {
                 const s = state.newConfigSelection;
-                
-                // Determine auto-filled values
                 let autoSku = "";
                 let autoDesc = "";
                 if (s.pl && s.pt && s.p && s.c && s.l) {
@@ -1137,7 +1134,6 @@ Embossing (Winchester > Decking > Building 6 )`;
                     <td><span class="status-badge status-active">Active</span></td>
                     <td style="text-align:center;"><i class="fas fa-history" style="color:#ccc;"></i></td>
                 `;
-                // Set selections back to dropdowns after innerHTML reflow
                 setTimeout(() => {
                     const selPL = tr.querySelector('td:nth-child(2) select'); if(selPL) selPL.value = s.pl;
                     const selPT = tr.querySelector('td:nth-child(3) select'); if(selPT) selPT.value = s.pt;
@@ -1203,7 +1199,7 @@ Embossing (Winchester > Decking > Building 6 )`;
         function startAddNewConfig() {
             if(state.editingConfigId) cancelConfig();
             state.isCreatingConfig = true;
-            state.newConfigSelection = { pl: "", pt: "", p: "", c: "", l: "" }; // Reset
+            state.newConfigSelection = { pl: "", pt: "", p: "", c: "", l: "" }; 
             renderConfigTable();
         }
         function startEditConfig(id) {
@@ -1221,7 +1217,6 @@ Embossing (Winchester > Decking > Building 6 )`;
             const min = document.getElementById('new-cfg-min').value;
             const max = document.getElementById('new-cfg-max').value;
             
-            // Re-validate match for SKU/Desc and ensure full selection
             if(!s.pl || !s.pt || !s.p || !s.c || !s.l) {
                  alert("All dropdown fields are mandatory. Please select all options."); return;
             }
@@ -1237,7 +1232,6 @@ Embossing (Winchester > Decking > Building 6 )`;
                 alert("Please select a complete valid combination from the dropdowns."); return; 
             }
 
-            // DUPLICATE CHECK: Only allow if existing is inactive
             const existingConfig = state.labConfigs[state.selectedLab].find(c => 
                 c.prodLine === s.pl && c.type === s.pt && c.profile === s.p && c.color === s.c && c.length === s.l
             );
@@ -1281,30 +1275,82 @@ Embossing (Winchester > Decking > Building 6 )`;
         // ==========================================
         // --- DASHBOARD LOGIC ---
         // ==========================================
-        // Populates dashboard dropdowns based on available ACTIVE Configs in Assign Lab Properties
+        function getDashFilteredOptions(field, currentSelections) {
+            // Find Active Configs
+            let filtered = state.labConfigs["Embossing"] || [];
+            // Filter inactive configs unless editing existing row that might use it? 
+            // Requirement says "All the Active configurations... should be available"
+            filtered = filtered.filter(c => c.status === true);
+
+            if (currentSelections.pl) filtered = filtered.filter(c => c.prodLine === currentSelections.pl);
+            if (currentSelections.pt) filtered = filtered.filter(c => c.type === currentSelections.pt);
+            if (currentSelections.p) filtered = filtered.filter(c => c.profile === currentSelections.p);
+            if (currentSelections.c) filtered = filtered.filter(c => c.color === currentSelections.c);
+
+            // Mapping for field names because config object keys might differ slightly from Master keys?
+            // Actually I used same keys: prodLine, type, profile, color, length
+            let mappedField = field;
+            if(field === 'prodLine') mappedField = 'prodLine';
+            if(field === 'profileType') mappedField = 'type';
+            if(field === 'profile') mappedField = 'profile';
+            if(field === 'color') mappedField = 'color';
+            if(field === 'length') mappedField = 'length';
+
+            const uniqueVals = [...new Set(filtered.map(c => c[mappedField]))].sort();
+            
+            let opts = `<option value="">Select</option>`;
+            uniqueVals.forEach(v => {
+                opts += `<option value="${v}" ${v === currentSelections.selectedVal ? 'selected' : ''}>${v}</option>`;
+            });
+            return opts;
+        }
+
+        function handleDashDropdownChange(rowId, field, value) {
+             // If creating new row
+             if(rowId === 'new') {
+                 if(field === 'pl') {
+                     state.newDashSelection = { pl: value, pt: "", p: "", c: "", l: "" };
+                 } else if(field === 'pt') {
+                     state.newDashSelection.pt = value; state.newDashSelection.p=""; state.newDashSelection.c=""; state.newDashSelection.l="";
+                 } else if(field === 'p') {
+                     state.newDashSelection.p = value; state.newDashSelection.c=""; state.newDashSelection.l="";
+                 } else if(field === 'c') {
+                     state.newDashSelection.c = value; state.newDashSelection.l="";
+                 } else if(field === 'l') {
+                     state.newDashSelection.l = value;
+                 }
+             } else {
+                 // Editing
+                 if(field === 'pl') {
+                     state.editDashSelection = { ...state.editDashSelection, pl: value, pt: "", p: "", c: "", l: "" };
+                 } else if(field === 'pt') {
+                     state.editDashSelection = { ...state.editDashSelection, pt: value, p: "", c: "", l: "" };
+                 } else if(field === 'p') {
+                     state.editDashSelection = { ...state.editDashSelection, p: value, c: "", l: "" };
+                 } else if(field === 'c') {
+                     state.editDashSelection = { ...state.editDashSelection, c: value, l: "" };
+                 } else if(field === 'l') {
+                     state.editDashSelection = { ...state.editDashSelection, l: value };
+                 }
+             }
+             renderDashTable();
+        }
+
         function renderDashTable() {
             dashTableBody.innerHTML = '';
-            const configs = state.labConfigs["Embossing"] || [];
             
-            // Unique Lists from Configs for Dropdowns
-            const getUnique = (field) => [...new Set(configs.map(c => c[field]))];
-            const productLines = getUnique('prodLine');
-            const profileTypes = getUnique('type');
-            const profiles = getUnique('profile');
-            const colors = getUnique('color');
-            const lines = ['Line A', 'Line B']; // Hardcoded for prototype
-            const lengths = getUnique('length');
-
-            const makeSelect = (id, opts, selected) => {
-                let h = `<select class="form-input" id="${id}"><option value="">Select</option>`;
-                opts.forEach(o => h += `<option value="${o}" ${o===selected?'selected':''}>${o}</option>`);
-                h += `</select>`;
-                return h;
-            };
-
-            if (state.isCreatingDash) {
+            // New Row at TOP
+             if (state.isCreatingDash) {
                 const tr = document.createElement('tr');
                 tr.className = 'edit-mode';
+                const s = state.newDashSelection;
+                const lines = ['Line A', 'Line B'];
+
+                const makeSelect = (id, optionsHTML) => `<select class="form-input" id="${id}" onchange="handleDashDropdownChange('new', '${id.split('-')[1]}', this.value)">${optionsHTML}</select>`;
+
+                // Helper for static list
+                let lineOpts = `<option value="">Select</option>` + lines.map(l=>`<option>${l}</option>`).join('');
+
                 tr.innerHTML = `
                     <td>
                         <button class="btn btn-success btn-sm" onclick="saveDashRow()"><i class="fas fa-check"></i></button>
@@ -1312,18 +1358,23 @@ Embossing (Winchester > Decking > Building 6 )`;
                     </td>
                     <td>${getFormattedDate().split(' ')[0]}</td>
                     <td>${getFormattedDate().split(' ')[1]}</td>
-                    <td>${makeSelect('d-line', lines)}</td>
-                    <td>${makeSelect('d-prodLine', productLines)}</td>
-                    <td>${makeSelect('d-profType', profileTypes)}</td>
-                    <td>${makeSelect('d-prof', profiles)}</td>
-                    <td>${makeSelect('d-col', colors)}</td>
-                    <td>${makeSelect('d-len', lengths)}</td>
+                    <td><select class="form-input" id="d-line">${lineOpts}</select></td>
+                    <td>${makeSelect('d-pl', getDashFilteredOptions('prodLine', {selectedVal:s.pl}))}</td>
+                    <td>${makeSelect('d-pt', getDashFilteredOptions('profileType', {pl:s.pl, selectedVal:s.pt}))}</td>
+                    <td>${makeSelect('d-p', getDashFilteredOptions('profile', {pl:s.pl, pt:s.pt, selectedVal:s.p}))}</td>
+                    <td>${makeSelect('d-c', getDashFilteredOptions('color', {pl:s.pl, pt:s.pt, p:s.p, selectedVal:s.c}))}</td>
+                    <td>${makeSelect('d-l', getDashFilteredOptions('length', {pl:s.pl, pt:s.pt, p:s.p, c:s.c, selectedVal:s.l}))}</td>
                     <td><input type="number" class="form-input" id="d-m1" oninput="calcAvg()"></td>
                     <td><input type="number" class="form-input" id="d-m2" oninput="calcAvg()"></td>
                     <td><input type="number" class="form-input" id="d-m3" oninput="calcAvg()"></td>
                     <td><span id="d-avg" style="font-weight:bold;">-</span></td>
                     <td>Demo User</td>
                 `;
+                // Set values back
+                setTimeout(() => {
+                   // Values are set by 'selectedVal' in getDashFilteredOptions logic directly
+                },0);
+
                 dashTableBody.appendChild(tr);
             }
 
@@ -1331,7 +1382,6 @@ Embossing (Winchester > Decking > Building 6 )`;
                 const tr = document.createElement('tr');
                 const isEditing = state.editingDashId === row.id;
                 
-                // Validate
                 let cellClass = "";
                 if(row.snapMin && row.snapMax) {
                     if(row.avg >= row.snapMin && row.avg <= row.snapMax) cellClass = "cell-pass"; else cellClass = "cell-fail";
@@ -1339,6 +1389,14 @@ Embossing (Winchester > Decking > Building 6 )`;
 
                 if (isEditing) {
                     tr.className = 'edit-mode';
+                    const s = state.editDashSelection;
+                    const lines = ['Line A', 'Line B'];
+                    let lineOpts = lines.map(l=>`<option ${l===row.line?'selected':''}>${l}</option>`).join('');
+
+                    // Cascading selects for Edit
+                     const makeSelectEdit = (fieldCode, optionsHTML) => 
+                        `<select class="form-input" id="ed-${fieldCode}" onchange="handleDashDropdownChange('${row.id}', '${fieldCode}', this.value)">${optionsHTML}</select>`;
+
                     tr.innerHTML = `
                         <td>
                             <button class="btn btn-primary btn-sm" onclick="updateDashRow(${row.id})">Save</button>
@@ -1346,12 +1404,12 @@ Embossing (Winchester > Decking > Building 6 )`;
                         </td>
                         <td>${row.date}</td>
                         <td>${row.time}</td>
-                        <td>${makeSelect('ed-line', lines, row.line)}</td>
-                        <td>${makeSelect('ed-prodLine', productLines, row.prodLine)}</td>
-                        <td>${makeSelect('ed-profType', profileTypes, row.profileType)}</td>
-                        <td>${makeSelect('ed-prof', profiles, row.profile)}</td>
-                        <td>${makeSelect('ed-col', colors, row.color)}</td>
-                        <td>${makeSelect('ed-len', lengths, row.length)}</td>
+                        <td><select class="form-input" id="ed-line">${lineOpts}</select></td>
+                        <td>${makeSelectEdit('pl', getDashFilteredOptions('prodLine', {selectedVal:s.pl}))}</td>
+                        <td>${makeSelectEdit('pt', getDashFilteredOptions('profileType', {pl:s.pl, selectedVal:s.pt}))}</td>
+                        <td>${makeSelectEdit('p', getDashFilteredOptions('profile', {pl:s.pl, pt:s.pt, selectedVal:s.p}))}</td>
+                        <td>${makeSelectEdit('c', getDashFilteredOptions('color', {pl:s.pl, pt:s.pt, p:s.p, selectedVal:s.c}))}</td>
+                        <td>${makeSelectEdit('l', getDashFilteredOptions('length', {pl:s.pl, pt:s.pt, p:s.p, c:s.c, selectedVal:s.l}))}</td>
                         <td><input type="number" class="form-input" id="ed-m1" value="${row.m1}" oninput="calcEditAvg(${row.id})"></td>
                         <td><input type="number" class="form-input" id="ed-m2" value="${row.m2}" oninput="calcEditAvg(${row.id})"></td>
                         <td><input type="number" class="form-input" id="ed-m3" value="${row.m3}" oninput="calcEditAvg(${row.id})"></td>
@@ -1387,6 +1445,7 @@ Embossing (Winchester > Decking > Building 6 )`;
         function startAddDashboardRow() {
             if(state.editingDashId) cancelEditDash();
             state.isCreatingDash = true;
+            state.newDashSelection = { pl: "", pt: "", p: "", c: "", l: "" };
             renderDashTable();
         }
         function cancelDashRow() {
@@ -1396,6 +1455,9 @@ Embossing (Winchester > Decking > Building 6 )`;
         function startEditDash(id) {
             state.isCreatingDash = false;
             state.editingDashId = id;
+            const row = state.embossingData.find(r=>r.id==id);
+            // Pre-load current values into selection state so dropdowns populate correctly
+            state.editDashSelection = { pl: row.prodLine, pt: row.profileType, p: row.profile, c: row.color, l: row.length };
             renderDashTable();
         }
         function cancelEditDash() {
@@ -1415,7 +1477,6 @@ Embossing (Winchester > Decking > Building 6 )`;
             const m3 = parseFloat(document.getElementById('d-m3').value)||0;
             const avg = ((m1+m2+m3)/3).toFixed(2);
             document.getElementById('d-avg').innerText = avg;
-            // Live validation logic removed for brevity but relies on finding config
         }
         function calcEditAvg(id) {
             const m1 = parseFloat(document.getElementById('ed-m1').value)||0;
@@ -1426,27 +1487,24 @@ Embossing (Winchester > Decking > Building 6 )`;
         }
 
         function saveDashRow() {
+            const s = state.newDashSelection;
             const line = document.getElementById('d-line').value;
-            const prodLine = document.getElementById('d-prodLine').value;
-            const profType = document.getElementById('d-profType').value;
-            const prof = document.getElementById('d-prof').value;
-            const col = document.getElementById('d-col').value;
-            const len = document.getElementById('d-len').value;
             const m1 = parseFloat(document.getElementById('d-m1').value);
             const m2 = parseFloat(document.getElementById('d-m2').value);
             const m3 = parseFloat(document.getElementById('d-m3').value);
             const avg = parseFloat(((m1+m2+m3)/3).toFixed(2));
 
-            if(!line||!prodLine||!profType||!prof||!col||!len) { alert("Fields required"); return; }
+            if(!line||!s.pl||!s.pt||!s.p||!s.c||!s.l) { alert("Fields required"); return; }
 
             // Find Config snapshot
-            const config = state.labConfigs["Embossing"].find(c => c.profile === prof && c.color === col); // Simple match
+            const config = state.labConfigs["Embossing"].find(c => c.prodLine===s.pl && c.type===s.pt && c.profile===s.p && c.color===s.c && c.length===s.l);
             let sMin=null, sMax=null;
             if(config) { sMin = config.min; sMax = config.max; }
 
             state.embossingData.unshift({
                 id: Date.now(), date: getFormattedDate().split(' ')[0], time: getFormattedDate().split(' ')[1],
-                line: line, prodLine: prodLine, profileType: profType, profile: prof, color: col, length: len, m1, m2, m3, avg, createdBy: 'Demo', 
+                line: line, prodLine: s.pl, profileType: s.pt, profile: s.p, color: s.c, length: s.l, 
+                m1, m2, m3, avg, createdBy: 'Demo', 
                 snapMin: sMin, snapMax: sMax
             });
             state.isCreatingDash = false;
@@ -1455,19 +1513,18 @@ Embossing (Winchester > Decking > Building 6 )`;
 
         function updateDashRow(id) {
             const row = state.embossingData.find(r => r.id === id);
+            const s = state.editDashSelection;
+            
             row.line = document.getElementById('ed-line').value;
-            row.prodLine = document.getElementById('ed-prodLine').value;
-            row.profileType = document.getElementById('ed-profType').value;
-            row.profile = document.getElementById('ed-prof').value;
-            row.color = document.getElementById('ed-col').value;
-            row.length = document.getElementById('ed-len').value;
+            row.prodLine = s.pl; row.profileType = s.pt; row.profile = s.p; row.color = s.c; row.length = s.l;
+            
             row.m1 = parseFloat(document.getElementById('ed-m1').value);
             row.m2 = parseFloat(document.getElementById('ed-m2').value);
             row.m3 = parseFloat(document.getElementById('ed-m3').value);
             row.avg = parseFloat(((row.m1+row.m2+row.m3)/3).toFixed(2));
 
             // Re-snap config
-            const config = state.labConfigs["Embossing"].find(c => c.profile === row.profile && c.color === row.color); 
+            const config = state.labConfigs["Embossing"].find(c => c.prodLine===s.pl && c.type===s.pt && c.profile===s.p && c.color===s.c && c.length===s.l); 
             if(config) { row.snapMin = config.min; row.snapMax = config.max; }
 
             state.editingDashId = null;
